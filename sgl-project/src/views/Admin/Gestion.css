@@ -1,0 +1,294 @@
+/* ==========================================================================
+   LAYOUT PRINCIPAL
+   ========================================================================== */
+.gestion-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f8fafc; /* Fondo gris muy claro profesional */
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+/* SIDEBAR IZQUIERDO */
+/* SIDEBAR IZQUIERDO CORREGIDO */
+.admin-menu {
+  width: 280px;
+  background-color: #1e293b;
+  color: white;
+  padding: 20px; /* Reducimos un poco el padding */
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  /* CAMBIOS CLAVE AQUÍ: */
+  top: 0;
+  bottom: 0;
+  left: 0;
+  height: 100%; /* Usamos 100% en lugar de 100vh para mejor compatibilidad */
+  z-index: 1000;
+  overflow: hidden; /* Evitamos que la barra entera scrollee */
+}
+
+/* Contenedor de navegación con scroll interno */
+.admin-menu nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1; /* Ocupa el espacio disponible */
+  overflow-y: auto; /* Si hay muchos botones, aparece scroll aquí */
+  padding-right: 5px; /* Espacio para que el scroll no tape el texto */
+  margin-bottom: 20px;
+}
+
+/* Estilo para la barra de scroll (opcional para que se vea moderna) */
+.admin-menu nav::-webkit-scrollbar {
+  width: 5px;
+}
+.admin-menu nav::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+}
+
+/* El footer ahora siempre se quedará pegado abajo sin salirse */
+.menu-footer {
+  margin-top: auto; 
+  padding-top: 15px;
+  border-top: 1px solid #334155;
+  background-color: #1e293b; /* Para que no se transparente al scrollear */
+}
+
+.admin-menu h2 {
+  font-size: 1.5rem;
+  margin-bottom: 40px;
+  text-align: center;
+  color: #3b82f6;
+  font-weight: 800;
+}
+
+.admin-menu nav {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-grow: 1;
+}
+
+/* BOTONES DEL MENÚ */
+.nav-item {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 14px 18px;
+  text-align: left;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-item:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #f8fafc;
+}
+
+.nav-item.active {
+  background-color: #3b82f6;
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* ÁREA DE CONTENIDO */
+.gestion-content {
+  flex-grow: 1;
+  margin-left: 280px; /* Espacio para el sidebar fixed */
+  padding: 40px;
+  max-width: 1200px;
+}
+
+/* ==========================================================================
+   COMPONENTES DE FORMULARIO
+   ========================================================================== */
+.content-header {
+  margin-bottom: 30px;
+}
+
+.content-header h1 {
+  font-size: 2rem;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.content-header p {
+  color: #64748b;
+}
+
+.form-card {
+  background: white;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.form-group input, 
+.form-group select,
+.admin-select {
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+  background-color: #fff;
+}
+
+.form-group input:focus, 
+.admin-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  ring: 2px solid rgba(59, 130, 246, 0.2);
+}
+
+/* ==========================================================================
+   TABLAS DE GESTIÓN
+   ========================================================================== */
+.table-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th {
+  background-color: #f8fafc;
+  padding: 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 700;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.admin-table td {
+  padding: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+  font-size: 0.95rem;
+  vertical-align: middle;
+}
+
+.admin-table tr:hover {
+  background-color: #f1f5f9;
+}
+
+/* BADGES (Etiquetas de estado) */
+.badge {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.badge.active { background-color: #dcfce7; color: #166534; }
+.badge.danger { background-color: #fee2e2; color: #991b1b; }
+.badge.info { background-color: #e0f2fe; color: #0369a1; }
+
+/* ==========================================================================
+   BOTONES
+   ========================================================================== */
+.btn-save {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-save:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.btn-save.small {
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  background-color: #10b981; /* Verde esmeralda */
+}
+
+.btn-delete {
+  background-color: #fee2e2;
+  color: #ef4444;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.btn-delete:hover {
+  background-color: #ef4444;
+  color: white;
+}
+
+/* FOOTER DEL MENU */
+.menu-footer {
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid #334155;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-logout-admin {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border: 1px solid #f87171;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-logout-admin:hover {
+  background-color: #ef4444;
+  color: white;
+}
+
+/* ANIMACIONES */
+.fade-in {
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
