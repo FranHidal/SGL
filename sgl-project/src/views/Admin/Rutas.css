@@ -1,0 +1,210 @@
+/* ==========================================================================
+   LAYOUT BASE (Sidebar + Content)
+   ========================================================================== */
+.gestion-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f8fafc;
+    font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Sidebar Fijo */
+.admin-menu {
+    width: 280px;
+    background-color: #1e293b;
+    color: white;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+}
+
+.admin-menu h2 {
+    color: #3b82f6;
+    font-size: 1.4rem;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+/* Contenido Principal con margen para no quedar bajo el sidebar */
+.gestion-content {
+    flex-grow: 1;
+    margin-left: 280px;
+    padding: 40px;
+    width: calc(100% - 280px);
+}
+
+/* ==========================================================================
+   ESTILOS DE COMPONENTES
+   ========================================================================== */
+
+.content-header {
+    margin-bottom: 30px;
+}
+
+.content-header h1 {
+    font-size: 2rem;
+    color: #0f172a;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.form-card {
+    background: white;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.form-card h3 {
+    margin-bottom: 20px;
+    color: #1e293b;
+    font-size: 1.1rem;
+    border-left: 4px solid #3b82f6;
+    padding-left: 10px;
+}
+
+/* Select de Operador */
+.admin-select {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background-color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+/* TABLA DE TIENDAS */
+.table-card {
+    max-height: 500px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-top: 10px;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-table th {
+    position: sticky;
+    top: 0;
+    background: #f1f5f9;
+    padding: 12px;
+    text-align: left;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: #64748b;
+    z-index: 10;
+}
+
+.admin-table td {
+    padding: 15px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.95rem;
+}
+
+.admin-table tr:hover {
+    background-color: #f8fafc;
+}
+
+/* Checkboxes */
+input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #3b82f6;
+}
+
+/* BADGES */
+.badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge.info {
+    background-color: #e0f2fe;
+    color: #0369a1;
+}
+
+/* ==========================================================================
+   BARRA DE ACCIONES (GENERAR RUTA)
+   ========================================================================== */
+.action-bar {
+    margin-top: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: #1e293b;
+    color: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+}
+
+.action-bar span {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.btn-save {
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-save:hover:not(:disabled) {
+    background-color: #2563eb;
+    transform: translateY(-2px);
+}
+
+.btn-save:disabled {
+    background-color: #475569;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* FOOTER / VOLVER */
+.menu-footer {
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 1px solid #334155;
+}
+
+.nav-item {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    padding: 12px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 8px;
+    margin-bottom: 5px;
+}
+
+.nav-item.active {
+    background: #3b82f6;
+    color: white;
+}

@@ -6,7 +6,7 @@
     </header>
 
     <div class="cards-grid">
-      <button class="menu-card" @click="goTo('envios')">
+      <button class="menu-card" @click="goTo('rutas')">
         <div class="card-icon">🗺️</div>
         <h2>Asignación de rutas</h2>
         <p>Establecer las rutas de recolección a los operarodores.</p>

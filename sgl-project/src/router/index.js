@@ -34,6 +34,12 @@ const router = createRouter({
       name: 'gestion',
       component: () => import('../views/Admin/Gestion.vue'),
       meta: { requiresAuth: true, role: 'admin' }
+    },
+      {
+      path: '/rutas',
+      name: 'rutas',
+      component: () => import('../views/Admin/Rutas.vue'),
+      meta: { requiresAuth: true, role: 'admin' }
     }
   ]
 })
