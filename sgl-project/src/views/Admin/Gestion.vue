@@ -1,7 +1,7 @@
 <template>
   <div class="gestion-container">
     <aside class="admin-menu">
-      <h2>Panel Admin 🔐</h2>
+      <h2>Panel Admin</h2>
       <nav>
         <button @click="vistaActual = 'crear'" :class="['nav-item', { active: vistaActual === 'crear' }]">
           Nuevo Colaborador 👤
@@ -70,7 +70,7 @@
               </div>
             </div>
             <button type="submit" class="btn-save" style="margin-top: 20px;">
-              Registrar Colaborador 💾
+              Registrar Colaborador
             </button>
           </form>
         </div>

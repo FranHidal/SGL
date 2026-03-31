@@ -189,6 +189,38 @@ app.get('/api/tiendas', (req, res) => {
     });
 });
 
+// --- MÓDULO DE PLANIFICACIÓN DE RUTAS ---
+
+app.post('/api/rutas/generar', (req, res) => {
+    const { id_operador, tiendas } = req.body; // tiendas: array de id_tienda
+
+    if (!tiendas || tiendas.length === 0) return res.status(400).send("No hay tiendas seleccionadas");
+
+    // 1. Crear la cabecera de la Ruta
+    const queryRuta = `INSERT INTO Ruta (fecha_creacion, id_operador) VALUES (CURRENT_DATE, ?)`;
+
+    db.query(queryRuta, [id_operador], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        const idRutaGenerada = result.insertId;
+
+        // 2. Crear el detalle (Insert Masivo)
+        // Por ahora el 'orden' es simplemente el índice del arreglo
+        const values = tiendas.map((id_tienda, index) => [idRutaGenerada, id_tienda, index + 1]);
+
+        const queryDetalle = `INSERT INTO Ruta_Detalle (id_ruta, id_tienda, orden) VALUES ?`;
+
+        db.query(queryDetalle, [values], (errDetalle) => {
+            if (errDetalle) return res.status(500).json({ error: errDetalle.message });
+            
+            res.status(201).json({ 
+                message: "✅ Ruta generada con éxito", 
+                id_ruta: idRutaGenerada 
+            });
+        });
+    });
+});
+
 // --- CATÁLOGOS ---
 
 app.get('/api/perfiles', (req, res) => {
