@@ -1,6 +1,7 @@
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
+const { exec } = require('child_process'); // Necesario para ejecutar Python
 
 const app = express();
 app.use(express.json());
@@ -39,56 +40,33 @@ app.post('/login', (req, res) => {
 });
 
 // --- COLABORADORES ---
-
 app.post('/api/colaboradores', (req, res) => {
-    const { 
-        nombre, primer_apellido, segundo_apellido, 
-        telefono, id_perfil, turno, horario 
-    } = req.body;
-
-    const queryCol = `INSERT INTO Colaborador 
-        (nombre, primer_apellido, segundo_apellido, telefono, id_perfil, turno, horario) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)`;
+    const { nombre, primer_apellido, segundo_apellido, telefono, id_perfil, turno, horario } = req.body;
+    const queryCol = `INSERT INTO Colaborador (nombre, primer_apellido, segundo_apellido, telefono, id_perfil, turno, horario) VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
     db.query(queryCol, [nombre, primer_apellido, segundo_apellido, telefono, id_perfil, turno, horario], (err, result) => {
-        if (err) {
-            console.error("Error al insertar colaborador:", err.message);
-            return res.status(500).json({ error: err.message });
-        }
-        
+        if (err) return res.status(500).json({ error: err.message });
         const nuevoIdColaborador = result.insertId;
 
-        // Si el perfil es 'Operador' (Verifica si en tu BD es el ID 1 o 2)
         if (id_perfil == 1) { 
             const queryOp = `INSERT INTO Operador (id_colaborador, id_vehiculo) VALUES (?, NULL)`;
             db.query(queryOp, [nuevoIdColaborador], (errOp) => {
-                if (errOp) console.error("Error al crear registro en tabla Operador:", errOp.message);
-                else console.log(`✅ Operador #${nuevoIdColaborador} vinculado correctamente.`);
+                if (errOp) console.error("Error en Operador:", errOp.message);
+                else console.log(`✅ Operador #${nuevoIdColaborador} vinculado.`);
             });
         }
-
-        res.status(201).json({ message: "✅ Colaborador registrado exitosamente", id: nuevoIdColaborador });
+        res.status(201).json({ message: "✅ Colaborador registrado", id: nuevoIdColaborador });
     });
 });
 
 app.get('/api/colaboradores', (req, res) => {
-    const query = `SELECT c.*, p.perfil as nombre_perfil FROM Colaborador c JOIN Perfil p ON c.id_perfil = p.id_perfil`;
-    db.query(query, (err, result) => {
+    db.query(`SELECT c.*, p.perfil as nombre_perfil FROM Colaborador c JOIN Perfil p ON c.id_perfil = p.id_perfil`, (err, result) => {
         if (err) return res.status(500).send(err);
         res.send(result);
     });
 });
 
-app.delete('/api/colaboradores/:id', (req, res) => {
-    const { id } = req.params;
-    db.query('DELETE FROM Colaborador WHERE id_colaborador = ?', [id], (err, result) => {
-        if (err) return res.status(500).send(err);
-        res.send({ message: "Colaborador eliminado" });
-    });
-});
-
-// --- GESTIÓN DE ASIGNACIONES (OPERADOR - VEHÍCULO) ---
-
+// --- GESTIÓN DE ASIGNACIONES ---
 app.get('/api/operadores-unidades', (req, res) => {
     const query = `
         SELECT o.id_operador, c.nombre, c.primer_apellido, v.id_vehiculo, v.marca, v.modelo, v.matricula
@@ -103,17 +81,13 @@ app.get('/api/operadores-unidades', (req, res) => {
 });
 
 app.put('/api/operadores/:id', (req, res) => {
-    const { id } = req.params;
-    const { id_vehiculo } = req.body;
-    const query = 'UPDATE Operador SET id_vehiculo = ? WHERE id_operador = ?';
-    db.query(query, [id_vehiculo, id], (err, result) => {
+    db.query('UPDATE Operador SET id_vehiculo = ? WHERE id_operador = ?', [req.body.id_vehiculo, req.params.id], (err) => {
         if (err) return res.status(500).send(err);
-        res.send({ message: "Asignación actualizada correctamente" });
+        res.send({ message: "Asignación actualizada" });
     });
 });
 
 // --- VEHÍCULOS ---
-
 app.get('/api/vehiculos', (req, res) => {
     db.query('SELECT * FROM Vehiculo', (err, result) => {
         if (err) return res.status(500).send(err);
@@ -123,14 +97,19 @@ app.get('/api/vehiculos', (req, res) => {
 
 app.post('/api/vehiculos', (req, res) => {
     const { marca, modelo, matricula, fecha_mantenimiento } = req.body;
-    const query = 'INSERT INTO Vehiculo (marca, modelo, matricula, fecha_mantenimiento) VALUES (?, ?, ?, ?)';
-    db.query(query, [marca, modelo, matricula, fecha_mantenimiento], (err, result) => {
+    db.query('INSERT INTO Vehiculo (marca, modelo, matricula, fecha_mantenimiento) VALUES (?, ?, ?, ?)', [marca, modelo, matricula, fecha_mantenimiento], (err) => {
         if (err) return res.status(500).send(err);
         res.status(201).send({ message: "Vehículo creado" });
     });
 });
 
-// --- GESTIÓN DE TIENDAS Y CADENAS (INCLUYE CONTACTO) ---
+// --- TIENDAS Y CONTACTOS ---
+app.post('/api/cadenas', (req, res) => {
+    db.query('INSERT INTO Cadena (nombre_cadena) VALUES (?)', [req.body.nombre_cadena], (err) => {
+        if (err) return res.status(500).send(err);
+        res.status(201).send({ message: "Cadena registrada" });
+    });
+});
 
 app.get('/api/cadenas', (req, res) => {
     db.query('SELECT * FROM Cadena', (err, result) => {
@@ -139,49 +118,39 @@ app.get('/api/cadenas', (req, res) => {
     });
 });
 
-app.post('/api/cadenas', (req, res) => {
-    const { nombre_cadena } = req.body;
-    db.query('INSERT INTO Cadena (nombre_cadena) VALUES (?)', [nombre_cadena], (err, result) => {
-        if (err) return res.status(500).send(err);
-        res.status(201).send({ message: "Cadena registrada", id: result.insertId });
-    });
-});
-
-// Registrar Tienda + Contacto
 app.post('/api/tiendas', (req, res) => {
-    const { 
-        nombre_tienda, direccion, longitud, latitud, id_cadena,
-        c_nombre, c_primer_apellido, c_telefono, c_correo 
-    } = req.body;
-
-    // Convertimos explícitamente a número por si Axios los mandó como String
+    const { nombre_tienda, direccion, longitud, latitud, id_cadena, c_nombre, c_primer_apellido, c_telefono, c_correo } = req.body;
     const lat = parseFloat(latitud);
     const lng = parseFloat(longitud);
 
-    const queryCon = `INSERT INTO Contacto (nombre, primer_apellido, telefono, correo_electronico) VALUES (?, ?, ?, ?)`;
-    
-    db.query(queryCon, [c_nombre, c_primer_apellido, c_telefono, c_correo], (err, result) => {
-        if (err) return res.status(500).json({ error: "Error en Contacto: " + err.message });
-
+    db.query(`INSERT INTO Contacto (nombre, primer_apellido, telefono, correo_electronico) VALUES (?, ?, ?, ?)`, [c_nombre, c_primer_apellido, c_telefono, c_correo], (err, result) => {
+        if (err) return res.status(500).json({ error: "Error en Contacto" });
         const idContacto = result.insertId;
-
-        const queryTienda = `INSERT INTO Tienda (nombre_tienda, direccion, longitud, latitud, id_cadena, id_contacto) 
-                             VALUES (?, ?, ?, ?, ?, ?)`;
-        
-        db.query(queryTienda, [nombre_tienda, direccion, lng, lat, id_cadena, idContacto], (errT) => {
-            if (errT) return res.status(500).json({ error: "Error en Tienda (Revisa decimales): " + errT.message });
-            
-            res.status(201).json({ message: "✅ Tienda y Contacto registrados exitosamente" });
+        db.query(`INSERT INTO Tienda (nombre_tienda, direccion, longitud, latitud, id_cadena, id_contacto) VALUES (?, ?, ?, ?, ?, ?)`, [nombre_tienda, direccion, lng, lat, id_cadena, idContacto], (errT) => {
+            if (errT) return res.status(500).json({ error: "Error en Tienda" });
+            res.status(201).json({ message: "✅ Tienda y Contacto registrados" });
         });
     });
 });
 
 app.get('/api/tiendas', (req, res) => {
+    const query = `SELECT t.*, c.nombre_cadena, con.nombre as contacto_nombre FROM Tienda t JOIN Cadena c ON t.id_cadena = c.id_cadena LEFT JOIN Contacto con ON t.id_contacto = con.id_contacto`;
+    db.query(query, (err, result) => {
+        if (err) return res.status(500).send(err);
+        res.send(result);
+    });
+});
+
+// --- GESTIÓN DE ACCESOS ---
+
+// Listar colaboradores que NO tienen cuenta aún
+app.get('/api/colaboradores-sin-acceso', (req, res) => {
     const query = `
-        SELECT t.*, c.nombre_cadena, con.nombre as contacto_nombre, con.telefono as contacto_tel
-        FROM Tienda t
-        JOIN Cadena c ON t.id_cadena = c.id_cadena
-        LEFT JOIN Contacto con ON t.id_contacto = con.id_contacto
+        SELECT c.id_colaborador, c.nombre, c.primer_apellido, p.perfil
+        FROM Colaborador c
+        JOIN Perfil p ON c.id_perfil = p.id_perfil
+        LEFT JOIN Usuarios u ON c.id_colaborador = u.id_colaborador
+        WHERE u.id_usuario IS NULL
     `;
     db.query(query, (err, result) => {
         if (err) return res.status(500).send(err);
@@ -189,40 +158,66 @@ app.get('/api/tiendas', (req, res) => {
     });
 });
 
-// --- MÓDULO DE PLANIFICACIÓN DE RUTAS ---
+// Crear usuario (Recuerda que el ROL debe coincidir con tu ENUM: 'admin' o 'operador')
+app.post('/api/usuarios/crear', (req, res) => {
+    const { id_colaborador, usuario, contrasena, rol } = req.body;
+    const query = `INSERT INTO Usuarios (id_colaborador, usuario, contrasena, rol) VALUES (?, ?, ?, ?)`;
+    
+    db.query(query, [id_colaborador, usuario, contrasena, rol], (err, result) => {
+        if (err) {
+            if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: "Ese nombre de usuario ya está ocupado." });
+            return res.status(500).json({ error: err.message });
+        }
+        res.status(201).json({ message: "✅ Cuenta activada exitosamente" });
+    });
+});
 
+// --- MÓDULO DE RUTAS (OPTIMIZACIÓN AUTOMÁTICA) ---
 app.post('/api/rutas/generar', (req, res) => {
-    const { id_operador, tiendas } = req.body; // tiendas: array de id_tienda
+    const { id_operador, tiendas } = req.body;
+    if (!tiendas || tiendas.length === 0) return res.status(400).send("No hay tiendas");
 
-    if (!tiendas || tiendas.length === 0) return res.status(400).send("No hay tiendas seleccionadas");
-
-    // 1. Crear la cabecera de la Ruta
-    const queryRuta = `INSERT INTO Ruta (fecha_creacion, id_operador) VALUES (CURRENT_DATE, ?)`;
+    // Agregamos optimizada = 0 por defecto
+    const queryRuta = `INSERT INTO Ruta (fecha_creacion, id_operador, optimizada) VALUES (CURRENT_DATE, ?, 0)`;
 
     db.query(queryRuta, [id_operador], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
+        const idRuta = result.insertId;
+        const values = tiendas.map((id, idx) => [idRuta, id, idx + 1]);
 
-        const idRutaGenerada = result.insertId;
-
-        // 2. Crear el detalle (Insert Masivo)
-        // Por ahora el 'orden' es simplemente el índice del arreglo
-        const values = tiendas.map((id_tienda, index) => [idRutaGenerada, id_tienda, index + 1]);
-
-        const queryDetalle = `INSERT INTO Ruta_Detalle (id_ruta, id_tienda, orden) VALUES ?`;
-
-        db.query(queryDetalle, [values], (errDetalle) => {
-            if (errDetalle) return res.status(500).json({ error: errDetalle.message });
+        db.query(`INSERT INTO Ruta_Detalle (id_ruta, id_tienda, orden) VALUES ?`, [values], (errDet) => {
+            if (errDet) return res.status(500).json({ error: errDet.message });
             
-            res.status(201).json({ 
-                message: "✅ Ruta generada con éxito", 
-                id_ruta: idRutaGenerada 
+            // LLAMADA AL OPTIMIZADOR PYTHON
+            console.log(`🤖 Despertando VSP para ruta #${idRuta}...`);
+            exec(`python ../AI-worker/VSP.py`, (error, stdout) => {
+                if (error) console.error(`❌ Python Error: ${error.message}`);
+                else console.log(`✅ Python Output: ${stdout}`);
             });
+
+            res.status(201).json({ message: "✅ Ruta generada. Optimizando...", id_ruta: idRuta });
         });
     });
 });
 
-// --- CATÁLOGOS ---
+// NUEVO: Obtener ruta optimizada para el mapa del operador
+app.get('/api/operador/mi-ruta/:id_colaborador', (req, res) => {
+    const query = `
+        SELECT rd.orden, t.nombre_tienda, t.latitud, t.longitud, rd.id_ruta_detalle
+        FROM Ruta r
+        JOIN Operador o ON r.id_operador = o.id_operador
+        JOIN Ruta_Detalle rd ON r.id_ruta = rd.id_ruta
+        JOIN Tienda t ON rd.id_tienda = t.id_tienda
+        WHERE o.id_colaborador = ? AND r.fecha_creacion = CURRENT_DATE
+        ORDER BY rd.orden ASC
+    `;
+    db.query(query, [req.params.id_colaborador], (err, result) => {
+        if (err) return res.status(500).send(err);
+        res.send(result);
+    });
+});
 
+// --- CATÁLOGOS ---
 app.get('/api/perfiles', (req, res) => {
     db.query('SELECT * FROM Perfil', (err, result) => {
         if (err) return res.status(500).send(err);
@@ -230,25 +225,14 @@ app.get('/api/perfiles', (req, res) => {
     });
 });
 
-// --- OPERACIONES (BITÁCORA) ---
-
+// --- BITÁCORA ---
 app.post('/api/bitacora', (req, res) => {
-    const { 
-        id_ruta, hora_llegada, id_tienda, id_cadena, folio, 
-        perecedero, bazar, peso, peso_salida, fecha, comentarios, id_operador 
-    } = req.body;
-
-    const query = `INSERT INTO Bitacora 
-        (id_ruta, hora_llegada, id_tienda, id_cadena, folio, perecedero, bazar, peso, peso_salida, fecha, comentarios, id_operador) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
-    const values = [id_ruta, hora_llegada, id_tienda, id_cadena, folio, perecedero, bazar, peso, peso_salida, fecha, comentarios, id_operador];
-
-    db.query(query, values, (err, result) => {
+    const { id_ruta, hora_llegada, id_tienda, id_cadena, folio, perecedero, bazar, peso, peso_salida, fecha, comentarios, id_operador } = req.body;
+    const query = `INSERT INTO Bitacora (id_ruta, hora_llegada, id_tienda, id_cadena, folio, perecedero, bazar, peso, peso_salida, fecha, comentarios, id_operador) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    db.query(query, [id_ruta, hora_llegada, id_tienda, id_cadena, folio, perecedero, bazar, peso, peso_salida, fecha, comentarios, id_operador], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
         res.status(200).json({ message: "Registro exitoso", id: result.insertId });
     });
 });
 
-// 4. Encendido del Servidor
-app.listen(3000, () => console.log('🚀 Servidor logística corriendo en puerto 3000'));
+app.listen(3000, () => console.log('🚀 Servidor logística Cancún en puerto 3000'));
