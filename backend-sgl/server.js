@@ -203,13 +203,26 @@ app.post('/api/rutas/generar', (req, res) => {
 // NUEVO: Obtener ruta optimizada para el mapa del operador
 app.get('/api/operador/mi-ruta/:id_colaborador', (req, res) => {
     const query = `
-        SELECT rd.orden, t.nombre_tienda, t.latitud, t.longitud, rd.id_ruta_detalle
+        SELECT 
+            rd.orden, 
+            t.id_tienda, 
+            t.nombre_tienda, 
+            t.latitud, 
+            t.longitud, 
+            rd.id_ruta_detalle, 
+            rd.id_ruta,
+            t.id_cadena,
+            IFNULL(c.nombre_cadena, 'Sin Cadena') as nombre_cadena,
+            v.matricula -- 👈 Aprovechamos para traer la matrícula si existe
         FROM Ruta r
         JOIN Operador o ON r.id_operador = o.id_operador
+        LEFT JOIN Vehiculo v ON o.id_vehiculo = v.id_vehiculo -- 👈 Para la unidad
         JOIN Ruta_Detalle rd ON r.id_ruta = rd.id_ruta
         JOIN Tienda t ON rd.id_tienda = t.id_tienda
-        WHERE o.id_colaborador = ?
+        LEFT JOIN Cadena c ON t.id_cadena = c.id_cadena -- 👈 LEFT JOIN es la clave
+        WHERE o.id_colaborador = ? 
         ORDER BY r.id_ruta DESC, rd.orden ASC
+        LIMIT 50
     `;
     db.query(query, [req.params.id_colaborador], (err, result) => {
         if (err) return res.status(500).send(err);
@@ -227,9 +240,9 @@ app.get('/api/perfiles', (req, res) => {
 
 // --- BITÁCORA ---
 app.post('/api/bitacora', (req, res) => {
-    const { id_ruta, hora_llegada, id_tienda, id_cadena, folio, perecedero, bazar, peso, peso_salida, fecha, comentarios, id_operador } = req.body;
-    const query = `INSERT INTO Bitacora (id_ruta, hora_llegada, id_tienda, id_cadena, folio, perecedero, bazar, peso, peso_salida, fecha, comentarios, id_operador) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    db.query(query, [id_ruta, hora_llegada, id_tienda, id_cadena, folio, perecedero, bazar, peso, peso_salida, fecha, comentarios, id_operador], (err, result) => {
+    const { id_ruta, hora_llegada, id_tienda, id_cadena, folio, perecedero, bazar, peso, peso_salida, fecha, comentarios, id_operador, no_perecedero } = req.body;
+    const query = `INSERT INTO Bitacora (id_ruta, hora_llegada, id_tienda, id_cadena, folio, perecedero, bazar, peso, peso_salida, fecha, comentarios, id_operador, no_perecedero) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    db.query(query, [id_ruta, hora_llegada, id_tienda, id_cadena, folio, perecedero, bazar, peso, peso_salida, fecha, comentarios, id_operador, no_perecedero], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
         res.status(200).json({ message: "Registro exitoso", id: result.insertId });
     });

@@ -47,7 +47,7 @@
   color: #475569;
   margin-bottom: 5px;
 }
-
+ 
 input, select, textarea {
   width: 100%;
   padding: 10px;
@@ -79,4 +79,55 @@ input, select, textarea {
   border: none;
   border-radius: 6px;
   cursor: pointer;
+}
+
+/* Estilos para las tarjetas de selección tipo Bool */
+.carga-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.check-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.check-card input {
+  display: none; /* Ocultamos el checkbox real */
+}
+
+.check-card .icon {
+  font-size: 1.5rem;
+  margin-bottom: 5px;
+}
+
+.check-card .text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+/* Estado activo cuando el checkbox está marcado */
+.check-card.is-active {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.check-card.is-active .text {
+  color: #1e40af;
+}
+
+.input-readonly {
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #475569;
 }
