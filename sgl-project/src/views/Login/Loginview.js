@@ -24,34 +24,34 @@ export default {
         // Si el servidor responde con auth: true
         if (response.data.auth) {
           const user = response.data.user;
-          console.log('Bienvenido:', user.nombre);
+          console.log('Sesión iniciada para:', user.nombre);
           
-          // 1. Guardamos la sesión en el navegador
-          localStorage.setItem('userName', user.nombre);
-          localStorage.setItem('userRole', user.rol);
-          localStorage.setItem('userId', user.id);
+          // 1. GUARDADO UNIFICADO (La "llave" que el Router y el Mapa esperan)
+          // Guardamos el objeto completo convertido a String
+          localStorage.setItem('user', JSON.stringify(user));
           
-          // 2. Redirección inteligente según el rol que viene de la BD
-          if (user.rol === 'admin') {
+          // 2. REDIRECCIÓN INTELIGENTE (Convertimos a minúsculas para evitar fallos)
+          const rol = user.rol.toLowerCase();
+
+          if (rol === 'admin') {
             router.push('/admin');
-          } else if (user.rol === 'operador') {
+          } else if (rol === 'operador') {
             router.push('/home');
           } else {
-            alert('Rol no reconocido. Contacta a soporte.');
+            alert('Rol no reconocido (' + user.rol + '). Contacta a soporte.');
           }
         }
       } catch (error) {
         // Manejo de errores de conexión o credenciales
         if (error.response && error.response.status === 401) {
-          alert('Usuario o contraseña incorrectos. Revisa tu BD en DBeaver.');
+          alert('Usuario o contraseña incorrectos.');
         } else {
-          alert('No se pudo conectar con el servidor. ¿Olvidaste encender Node?');
+          alert('Error de conexión. Verifica que el servidor Node esté corriendo.');
         }
         console.error('Error en el login:', error);
       }
     };
 
-    // Retornamos lo que el HTML necesita usar
     return {
       credentials,
       submitLogin

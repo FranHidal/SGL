@@ -28,10 +28,16 @@
 <script setup>
 import { useRouter } from 'vue-router';
 const router = useRouter();
-const userName = localStorage.getItem('userName') || 'Usuario';
+
+// 1. Buscamos el objeto completo 'user'
+const userRaw = localStorage.getItem('user');
+const user = userRaw ? JSON.parse(userRaw) : null;
+
+// 2. Extraemos el nombre del objeto
+const userName = user ? user.nombre : 'Operador';
 
 const goTo = (modulo) => {
-  router.push(`/${modulo}`);
+  router.push({ name: modulo }); // Es más seguro usar el nombre de la ruta
 };
 
 const logout = () => {

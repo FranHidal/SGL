@@ -2,22 +2,24 @@
   <div class="bitacora-container">
     <form @submit.prevent="enviarRegistro" class="bitacora-form">
       <header class="form-header">
-        <h2>Registro de Bitácora</h2>
-        <p>Folio de Control Logístico</p>
+        <h2>Registro de Entrega 🚚</h2>
+        <p>Unidad: {{ datosRuta.matricula || 'Cargando...' }}</p>
       </header>
 
       <div class="form-row">
         <div class="form-group">
-          <label>Cadena 🏢</label>
-          <select v-model="form.id_cadena" required>
-            <option v-for="c in catalogos.cadenas" :key="c.id" :value="c.id">{{ c.nombre }}</option>
+          <label>Tienda Asignada 🏪</label>
+          <select v-model="form.id_tienda" @change="autoSeleccionarCadena" required>
+            <option :value="null" disabled>-- Seleccione la parada --</option>
+            <option v-for="t in paradasAsignadas" :key="t.id_tienda" :value="t.id_tienda">
+              Parada {{ t.orden }}: {{ t.nombre_tienda }}
+            </option>
           </select>
         </div>
+        
         <div class="form-group">
-          <label>Tienda 🏪</label>
-          <select v-model="form.id_tienda" required>
-            <option v-for="t in catalogos.tiendas" :key="t.id" :value="t.id">{{ t.nombre }}</option>
-          </select>
+          <label>Cadena 🏢</label>
+          <input type="text" :value="nombreCadenaSeleccionada" readonly class="input-readonly" />
         </div>
       </div>
 
@@ -49,31 +51,41 @@
       </div>
 
       <div class="form-group">
-        <label>Peso de Salida 🚛</label>
+        <label>Peso de Salida 🚛 (Vaciado/Devolución)</label>
         <input type="number" step="0.01" v-model="form.peso_salida" placeholder="0.00" />
       </div>
 
       <div class="form-group">
-        <label>Comentarios</label>
-        <textarea v-model="form.comentarios" rows="3"></textarea>
+        <label>Comentarios / Observaciones</label>
+        <textarea v-model="form.comentarios" rows="3" placeholder="Ej. Retraso por tráfico en la zona hotelera..."></textarea>
       </div>
 
       <div class="form-actions">
         <button type="button" @click="$router.push('/home')" class="btn-cancel">Cancelar</button>
-        <button type="submit" class="btn-submit">Guardar Registro</button>
+        <button type="submit" class="btn-submit" :disabled="guardando">
+          {{ guardando ? 'Guardando...' : 'Finalizar Entrega' }}
+        </button>
       </div>
     </form>
   </div>
 </template>
 
 <script setup>
-import { reactive, onMounted } from 'vue';
+import { reactive, ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
+const guardando = ref(false);
+const paradasAsignadas = ref([]);
+const datosRuta = ref({});
+const nombreCadenaSeleccionada = ref('Seleccione tienda');
+
+// Obtenemos los datos del usuario desde el localStorage (guardados en el Login)
+const user = JSON.parse(localStorage.getItem('user'));
+
 const form = reactive({
-  id_ruta: 1, // Esto vendría de la sesión o ruta activa
+  id_ruta: null,
   hora_llegada: '',
   id_tienda: null,
   id_cadena: null,
@@ -84,25 +96,54 @@ const form = reactive({
   peso_salida: 0,
   fecha: new Date().toISOString().split('T')[0],
   comentarios: '',
-  id_operador: localStorage.getItem('userId') // Asumiendo que guardas el ID en login
+  id_operador: user?.id_colaborador || null
 });
-
-// Para cargar los selectores desde la BD
-const catalogos = reactive({ tiendas: [], cadenas: [] });
 
 onMounted(async () => {
-  // Aquí cargarías tus tablas de Tienda y Cadena
-  // const resT = await axios.get('http://localhost:3000/api/tiendas');
-  // catalogos.tiendas = resT.data;
+  if (!user) {
+    router.push('/');
+    return;
+  }
+  await cargarDatosRutaDelDia();
 });
 
+const cargarDatosRutaDelDia = async () => {
+  try {
+    // 1. Obtener las paradas ordenadas por el algoritmo VSP para este operador
+    const res = await axios.get(`http://localhost:3000/api/operador/mi-ruta/${user.id_colaborador}`);
+    
+    if (res.data.length > 0) {
+      paradasAsignadas.value = res.data;
+      // El id_ruta está en cualquiera de los registros de la consulta
+      form.id_ruta = res.data[0].id_ruta;
+      // Si el endpoint no trae la matrícula, podrías hacer otro fetch o usar lo que tengas en sesion
+    } else {
+      alert("No tienes una ruta asignada para hoy.");
+      router.push('/home');
+    }
+  } catch (error) {
+    console.error("Error al cargar ruta:", error);
+  }
+};
+
+const autoSeleccionarCadena = () => {
+  const tienda = paradasAsignadas.value.find(t => t.id_tienda === form.id_tienda);
+  if (tienda) {
+    form.id_cadena = tienda.id_cadena;
+    nombreCadenaSeleccionada.value = tienda.nombre_cadena;
+  }
+};
+
 const enviarRegistro = async () => {
+  guardando.value = true;
   try {
     await axios.post('http://localhost:3000/api/bitacora', form);
-    alert('✅ Registro guardado con éxito');
+    alert('✅ Entrega registrada en el sistema');
     router.push('/home');
   } catch (error) {
-    alert('❌ Error al guardar el registro');
+    alert('❌ Error al guardar en la base de datos');
+  } finally {
+    guardando.value = false;
   }
 };
 </script>

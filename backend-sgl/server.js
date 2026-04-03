@@ -208,8 +208,8 @@ app.get('/api/operador/mi-ruta/:id_colaborador', (req, res) => {
         JOIN Operador o ON r.id_operador = o.id_operador
         JOIN Ruta_Detalle rd ON r.id_ruta = rd.id_ruta
         JOIN Tienda t ON rd.id_tienda = t.id_tienda
-        WHERE o.id_colaborador = ? AND r.fecha_creacion = CURRENT_DATE
-        ORDER BY rd.orden ASC
+        WHERE o.id_colaborador = ?
+        ORDER BY r.id_ruta DESC, rd.orden ASC
     `;
     db.query(query, [req.params.id_colaborador], (err, result) => {
         if (err) return res.status(500).send(err);

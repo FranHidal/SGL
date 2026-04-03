@@ -6,7 +6,7 @@ import numpy as np
 # ===============================
 # 1. CONFIGURACIÓN Y CONEXIÓN
 # ===============================
-ORS_CLIENT = openrouteservice.Client(key="TU_API_KEY_AQUÍ")
+ORS_CLIENT = openrouteservice.Client(key="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImFkMzRhMTZhOTczNjQ3NDViNTdmN2IzYjY1NDlhODlhIiwiaCI6Im11cm11cjY0In0=")
 
 def get_db_connection():
     return mysql.connector.connect(

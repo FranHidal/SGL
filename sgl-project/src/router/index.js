@@ -29,13 +29,13 @@ const router = createRouter({
       component: () => import('../views/Operador/Mapa.vue'),
       meta: { requiresAuth: true, role: 'operador' }
     },
-      {
+    {
       path: '/gestion',
       name: 'gestion',
       component: () => import('../views/Admin/Gestion.vue'),
       meta: { requiresAuth: true, role: 'admin' }
     },
-      {
+    {
       path: '/rutas',
       name: 'rutas',
       component: () => import('../views/Admin/Rutas.vue'),
@@ -45,23 +45,26 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  const isAuthenticated = localStorage.getItem('userName');
-  const userRole = localStorage.getItem('userRole');
+  // 1. Extraemos el objeto usuario del localStorage
+  const userRaw = localStorage.getItem('user');
+  const user = userRaw ? JSON.parse(userRaw) : null;
 
-  // 1. Si requiere auth y no está logueado -> al Login
-  if (to.meta.requiresAuth && !isAuthenticated) {
+  // 2. Si la ruta requiere auth y no hay usuario -> al Login
+  if (to.meta.requiresAuth && !user) {
     return { name: 'login' };
   }
 
-  // 2. Si tiene rol pero no coincide
-  if (to.meta.role && to.meta.role !== userRole) {
-    console.warn(`Bloqueado: necesitas ${to.meta.role}, tienes ${userRole}`);
-    if (userRole === 'admin') return { name: 'admin' };
-    if (userRole === 'operador') return { name: 'home' };
-    return { name: 'login' };
-  }
+  // 3. Validación de Roles
+  if (to.meta.role && user) {
+    // Forzamos minúsculas para evitar errores de "Admin" vs "admin"
+    const rolUsuario = user.rol.toLowerCase();
+    const rolRequerido = to.meta.role.toLowerCase();
 
-  // Si todo está bien, no retornes nada (equivale a dejar pasar)
+    if (rolUsuario !== rolRequerido) {
+      console.warn(`Bloqueado: necesitas ${rolRequerido}, tienes ${rolUsuario}`);
+      return rolUsuario === 'admin' ? { name: 'admin' } : { name: 'home' };
+    }
+  }
 });
 
 export default router
