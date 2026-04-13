@@ -1,7 +1,7 @@
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
-const { exec } = require('child_process'); // Necesario para ejecutar Python
+const { exec } = require('child_process');
 
 const app = express();
 app.use(express.json());
@@ -141,43 +141,11 @@ app.get('/api/tiendas', (req, res) => {
     });
 });
 
-// --- GESTIÓN DE ACCESOS ---
-
-// Listar colaboradores que NO tienen cuenta aún
-app.get('/api/colaboradores-sin-acceso', (req, res) => {
-    const query = `
-        SELECT c.id_colaborador, c.nombre, c.primer_apellido, p.perfil
-        FROM Colaborador c
-        JOIN Perfil p ON c.id_perfil = p.id_perfil
-        LEFT JOIN Usuarios u ON c.id_colaborador = u.id_colaborador
-        WHERE u.id_usuario IS NULL
-    `;
-    db.query(query, (err, result) => {
-        if (err) return res.status(500).send(err);
-        res.send(result);
-    });
-});
-
-// Crear usuario (Recuerda que el ROL debe coincidir con tu ENUM: 'admin' o 'operador')
-app.post('/api/usuarios/crear', (req, res) => {
-    const { id_colaborador, usuario, contrasena, rol } = req.body;
-    const query = `INSERT INTO Usuarios (id_colaborador, usuario, contrasena, rol) VALUES (?, ?, ?, ?)`;
-    
-    db.query(query, [id_colaborador, usuario, contrasena, rol], (err, result) => {
-        if (err) {
-            if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: "Ese nombre de usuario ya está ocupado." });
-            return res.status(500).json({ error: err.message });
-        }
-        res.status(201).json({ message: "✅ Cuenta activada exitosamente" });
-    });
-});
-
-// --- MÓDULO DE RUTAS (OPTIMIZACIÓN AUTOMÁTICA) ---
+// --- MÓDULO DE RUTAS ---
 app.post('/api/rutas/generar', (req, res) => {
     const { id_operador, tiendas } = req.body;
     if (!tiendas || tiendas.length === 0) return res.status(400).send("No hay tiendas");
 
-    // Agregamos optimizada = 0 por defecto
     const queryRuta = `INSERT INTO Ruta (fecha_creacion, id_operador, optimizada) VALUES (CURRENT_DATE, ?, 0)`;
 
     db.query(queryRuta, [id_operador], (err, result) => {
@@ -188,7 +156,6 @@ app.post('/api/rutas/generar', (req, res) => {
         db.query(`INSERT INTO Ruta_Detalle (id_ruta, id_tienda, orden) VALUES ?`, [values], (errDet) => {
             if (errDet) return res.status(500).json({ error: errDet.message });
             
-            // LLAMADA AL OPTIMIZADOR PYTHON
             console.log(`🤖 Despertando VSP para ruta #${idRuta}...`);
             exec(`python ../AI-worker/VSP.py`, (error, stdout) => {
                 if (error) console.error(`❌ Python Error: ${error.message}`);
@@ -200,26 +167,19 @@ app.post('/api/rutas/generar', (req, res) => {
     });
 });
 
-// NUEVO: Obtener ruta optimizada para el mapa del operador
 app.get('/api/operador/mi-ruta/:id_colaborador', (req, res) => {
     const query = `
         SELECT 
-            rd.orden, 
-            t.id_tienda, 
-            t.nombre_tienda, 
-            t.latitud, 
-            t.longitud, 
-            rd.id_ruta_detalle, 
-            rd.id_ruta,
-            t.id_cadena,
-            IFNULL(c.nombre_cadena, 'Sin Cadena') as nombre_cadena,
-            v.matricula -- 👈 Aprovechamos para traer la matrícula si existe
+            rd.orden, t.id_tienda, t.nombre_tienda, t.latitud, t.longitud, 
+            rd.id_ruta_detalle, rd.id_ruta, o.id_operador, 
+            t.id_cadena, IFNULL(c.nombre_cadena, 'Sin Cadena') as nombre_cadena,
+            v.matricula
         FROM Ruta r
         JOIN Operador o ON r.id_operador = o.id_operador
-        LEFT JOIN Vehiculo v ON o.id_vehiculo = v.id_vehiculo -- 👈 Para la unidad
+        LEFT JOIN Vehiculo v ON o.id_vehiculo = v.id_vehiculo 
         JOIN Ruta_Detalle rd ON r.id_ruta = rd.id_ruta
         JOIN Tienda t ON rd.id_tienda = t.id_tienda
-        LEFT JOIN Cadena c ON t.id_cadena = c.id_cadena -- 👈 LEFT JOIN es la clave
+        LEFT JOIN Cadena c ON t.id_cadena = c.id_cadena
         WHERE o.id_colaborador = ? 
         ORDER BY r.id_ruta DESC, rd.orden ASC
         LIMIT 50
@@ -230,22 +190,47 @@ app.get('/api/operador/mi-ruta/:id_colaborador', (req, res) => {
     });
 });
 
-// --- CATÁLOGOS ---
-app.get('/api/perfiles', (req, res) => {
-    db.query('SELECT * FROM Perfil', (err, result) => {
-        if (err) return res.status(500).send(err);
-        res.send(result);
-    });
-});
-
-// --- BITÁCORA ---
+// --- BITÁCORA (MULTI-REGISTRO CORREGIDO) ---
 app.post('/api/bitacora', (req, res) => {
-    const { id_ruta, hora_llegada, id_tienda, id_cadena, folio, perecedero, bazar, peso, peso_salida, fecha, comentarios, id_operador, no_perecedero } = req.body;
-    const query = `INSERT INTO Bitacora (id_ruta, hora_llegada, id_tienda, id_cadena, folio, perecedero, bazar, peso, peso_salida, fecha, comentarios, id_operador, no_perecedero) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    db.query(query, [id_ruta, hora_llegada, id_tienda, id_cadena, folio, perecedero, bazar, peso, peso_salida, fecha, comentarios, id_operador, no_perecedero], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(200).json({ message: "Registro exitoso", id: result.insertId });
+    const { 
+        id_ruta, hora_llegada, id_tienda, id_cadena, folio, 
+        fecha, comentarios, id_operador,
+        perecedero, no_perecedero, bazar 
+    } = req.body;
+
+    // Registros individuales
+    const registros = [];
+
+    // Si hay perecedero, creamos una fila donde el peso es la cantidad de perecedero
+    if (parseFloat(perecedero) > 0) {
+        registros.push([id_ruta, hora_llegada, id_tienda, id_cadena, folio, parseFloat(perecedero), fecha, comentarios, id_operador, 'Perecedero']);
+    }
+    // Si hay no perecedero, otra fila con ese peso
+    if (parseFloat(no_perecedero) > 0) {
+        registros.push([id_ruta, hora_llegada, id_tienda, id_cadena, folio, parseFloat(no_perecedero), fecha, comentarios, id_operador, 'No Perecedero']);
+    }
+    // Si hay bazar, otra fila con ese peso
+    if (parseFloat(bazar) > 0) {
+        registros.push([id_ruta, hora_llegada, id_tienda, id_cadena, folio, parseFloat(bazar), fecha, comentarios, id_operador, 'Bazar']);
+    }
+
+    if (registros.length === 0) {
+        return res.status(400).json({ error: "Debe ingresar al menos un peso mayor a 0" });
+    }
+
+    // IMPORTANTE: Solo insertamos en estas columnas. 
+    // Las columnas individuales (perecedero, bazar, etc.) se quedarán en su valor por defecto (0 o NULL)
+    const query = `INSERT INTO Bitacora 
+        (id_ruta, hora_llegada, id_tienda, id_cadena, folio, peso, fecha, comentarios, id_operador, categoria) 
+        VALUES ?`;
+
+    db.query(query, [registros], (err, result) => {
+        if (err) {
+            console.error("❌ Error en MySQL:", err);
+            return res.status(500).json({ error: err.message });
+        }
+        res.status(201).json({ 
+            message: `✅ Éxito: Se generaron ${result.affectedRows} registros.` 
+        });
     });
 });
-
-app.listen(3000, () => console.log('🚀 Servidor logística Cancún en puerto 3000'));

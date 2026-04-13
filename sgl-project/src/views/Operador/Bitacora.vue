@@ -3,7 +3,6 @@
     <form @submit.prevent="enviarRegistro" class="bitacora-form">
       <header class="form-header">
         <h2>Registro de Entrega 🚚</h2>
-        <p>Seleccione los tipos de carga recolectados</p>
       </header>
 
       <div class="form-row">
@@ -22,25 +21,22 @@
         </div>
       </div>
 
-      <div class="form-section-title">¿Qué se recolectó? 📦</div>
-      <div class="carga-selector-grid">
-        <label class="check-card" :class="{ 'is-active': form.perecedero }">
-          <input type="checkbox" v-model="form.perecedero" :true-value="1" :false-value="0" />
-          <span class="icon">🍎</span>
-          <span class="text">Perecedero</span>
-        </label>
+      <div class="form-section-title">Detalle de Recolección (kg) 📦</div>
+      <div class="kilos-grid">
+        <div class="kilos-card">
+          <label>Perecedero</label>
+          <input type="number" step="0.1" v-model.number="form.perecedero" placeholder="0.0" min="0" />
+        </div>
 
-        <label class="check-card" :class="{ 'is-active': form.no_perecedero }">
-          <input type="checkbox" v-model="form.no_perecedero" :true-value="1" :false-value="0" />
-          <span class="icon">🥫</span>
-          <span class="text">No Perecedero</span>
-        </label>
+        <div class="kilos-card">
+          <label>No Perecedero</label>
+          <input type="number" step="0.1" v-model.number="form.no_perecedero" placeholder="0.0" min="0" />
+        </div>
 
-        <label class="check-card" :class="{ 'is-active': form.bazar }">
-          <input type="checkbox" v-model="form.bazar" :true-value="1" :false-value="0" />
-          <span class="icon">🧸</span>
-          <span class="text">Bazar</span>
-        </label>
+        <div class="kilos-card">
+          <label>Bazar</label>
+          <input type="number" step="0.1" v-model.number="form.bazar" placeholder="0.0" min="0" />
+        </div>
       </div>
 
       <div class="form-row" style="margin-top: 20px;">
@@ -48,20 +44,26 @@
           <label>Folio Ticket</label>
           <input type="text" v-model="form.folio" placeholder="ABC-123" required />
         </div>
-        <div class="form-group" style="margin-left: 20px;">
+        <div class="form-group">
           <label>Hora Llegada</label>
           <input type="time" v-model="form.hora_llegada" required />
         </div>
       </div>
 
-        <div class="form-group">
-          <label>Peso Total (kg)</label>
-          <input type="number" step="0.1" v-model.number="form.peso" placeholder="0.0" />
-        </div>
+      <div class="form-group">
+        <label>Peso Total Calculado (kg) ⚖️</label>
+        <input 
+          type="number" 
+          :value="totalCalculado" 
+          readonly 
+          class="input-total-auto"
+          placeholder="0.0" 
+        />
+      </div>
 
       <div class="form-group">
         <label>Comentarios</label>
-        <textarea v-model="form.comentarios" rows="2"></textarea>
+        <textarea v-model="form.comentarios" rows="2" placeholder="Notas adicionales..."></textarea>
       </div>
 
       <div class="form-actions">
@@ -75,7 +77,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue';
+import { reactive, ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 
@@ -91,15 +93,19 @@ const form = reactive({
   id_tienda: null,
   id_cadena: null,
   folio: '',
-  // Usamos 0 por defecto para que la BD reciba el entero
   perecedero: 0,
   no_perecedero: 0,
   bazar: 0,
-  peso: 0,
-  peso_salida: 0,
+  peso: 0, 
   fecha: new Date().toISOString().split('T')[0],
   comentarios: '',
   id_operador: null
+});
+
+// Lógica de cálculo para visualización del usuario
+const totalCalculado = computed(() => {
+  const suma = (Number(form.perecedero) || 0) + (Number(form.no_perecedero) || 0) + (Number(form.bazar) || 0);
+  return parseFloat(suma.toFixed(2));
 });
 
 onMounted(async () => {
@@ -114,9 +120,14 @@ const cargarRuta = async () => {
       paradasAsignadas.value = res.data;
       form.id_ruta = res.data[0].id_ruta;
       form.id_operador = res.data[0].id_operador;
-      form.hora_llegada = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      
+      // Formatear hora actual HH:mm
+      const ahora = new Date();
+      form.hora_llegada = ahora.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     }
-  } catch (e) { console.error(e); }
+  } catch (e) {
+    console.error("Error al cargar paradas:", e);
+  }
 };
 
 const autoSeleccionarCadena = () => {
@@ -128,13 +139,24 @@ const autoSeleccionarCadena = () => {
 };
 
 const enviarRegistro = async () => {
+  if (totalCalculado.value <= 0) {
+    alert('⚠️ Por favor ingrese al menos una cantidad mayor a 0');
+    return;
+  }
+
   guardando.value = true;
   try {
-    await axios.post('http://localhost:3000/api/bitacora', form);
-    alert('✅ Registrado');
+    // Enviamos el formulario. 
+    // Perecedero, no_perecedero y bazar llevan las cantidades.
+    const response = await axios.post('http://localhost:3000/api/bitacora', form);
+    alert(response.data.message);
     router.push('/home');
-  } catch (e) { alert('❌ Error'); }
-  finally { guardando.value = false; }
+  } catch (e) { 
+    console.error(e);
+    alert('❌ Error al guardar: ' + (e.response?.data?.error || 'Servidor no responde')); 
+  } finally { 
+    guardando.value = false; 
+  }
 };
 </script>
 
