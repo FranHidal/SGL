@@ -162,6 +162,7 @@
                 <select v-model="accesoForm.rol" required>
                   <option value="operador">Operador</option>
                   <option value="admin">Administrador</option>
+                  <option value="director">Director</option>
                 </select>
               </div>
             </div>

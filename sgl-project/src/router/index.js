@@ -40,6 +40,24 @@ const router = createRouter({
       name: 'rutas',
       component: () => import('../views/Admin/Rutas.vue'),
       meta: { requiresAuth: true, role: 'admin' }
+    },
+    {
+      path: '/director',
+      name: 'director',
+      component: () => import('../views/Director/Home.vue'),
+      meta: { requiresAuth: true, role: 'director' }
+    },
+    {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: () => import('../views/Director/Dashboard.vue'),
+      meta: { requiresAuth: true, role: 'director' }
+    },
+    {
+      path: '/flota',
+      name: 'flota',
+      component: () => import('../views/Director/Flota.vue'),
+      meta: { requiresAuth: true, role: 'director' }
     }
   ]
 })

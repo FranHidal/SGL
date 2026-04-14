@@ -37,6 +37,8 @@ export default {
             router.push('/admin');
           } else if (rol === 'operador') {
             router.push('/home');
+          } else if (rol === 'director') {
+            router.push('/director');
           } else {
             alert('Rol no reconocido (' + user.rol + '). Contacta a soporte.');
           }

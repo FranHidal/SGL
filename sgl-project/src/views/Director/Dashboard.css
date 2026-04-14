@@ -1,0 +1,238 @@
+/* Dashboard.css */
+
+.dashboard-container {
+    min-height: 100vh;
+    background-color: #f1f5f9;
+    padding: 30px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 20px;
+}
+
+.header-titles h1 {
+    color: #1e293b;
+    font-size: 2.2rem;
+    margin: 0;
+}
+
+.header-titles p {
+    color: #64748b;
+    margin: 5px 0 0;
+    font-size: 1.1rem;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.date-badge {
+    background: white;
+    padding: 10px 20px;
+    border-radius: 12px;
+    color: #334155;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.btn-back {
+    background: #1e293b;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+.btn-back:hover {
+    background: #3b82f6;
+}
+
+/* 1. KPI Grids */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+.kpi-card {
+    background: white;
+    border-radius: 16px;
+    padding: 25px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border-left: 5px solid transparent;
+    transition: transform 0.2s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-3px);
+}
+
+/* Colores de las KPI cards */
+.kpi-card.green { border-left-color: #10b981; }
+.kpi-card.blue { border-left-color: #3b82f6; }
+.kpi-card.yellow { border-left-color: #f59e0b; }
+.kpi-card.red { border-left-color: #ef4444; }
+
+.kpi-icon {
+    font-size: 3rem;
+    opacity: 0.7;
+}
+
+.kpi-data h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.kpi-data .number {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 5px 0;
+}
+
+.kpi-data .status {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin: 0;
+}
+
+/* 2. Details Grids */
+.details-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 25px;
+}
+
+.table-card, .chart-placeholder-card {
+    background: white;
+    border-radius: 16px;
+    padding: 25px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+h3 {
+    color: #1e293b;
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 1.3rem;
+}
+
+/* Tabla de Rutas (Reutilizando estilos del admin pero más limpios) */
+.admin-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.admin-table th {
+    text-align: left;
+    color: #64748b;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    padding: 12px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.admin-table td {
+    padding: 15px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+}
+
+/* Barra de progreso dentro de la tabla */
+.progress-bar {
+    width: 100px;
+    height: 8px;
+    background-color: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+    display: inline-block;
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #3b82f6; /* Azul progreso */
+    border-radius: 4px;
+}
+
+/* Badges de Estado */
+.badge {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+.badge.active { background-color: #dcfce7; color: #166534; } /* Completada */
+.badge.warning { background-color: #fef3c7; color: #92400e; } /* En Ruta */
+.badge.danger { background-color: #fee2e2; color: #991b1b; } /* Retrasada */
+
+/* Placeholder para "Gráfico" de Volumen de Carga */
+.chart-placeholder-card .chart-help {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    text-align: center;
+    margin-top: 20px;
+    font-style: italic;
+}
+
+.volume-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.volume-item {
+    display: grid;
+    grid-template-columns: 80px 1fr 70px;
+    align-items: center;
+    gap: 10px;
+}
+
+.cadena-nombre {
+    font-weight: 600;
+    color: #475569;
+}
+
+.volume-bar-container {
+    height: 10px;
+    background-color: #f1f5f9;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.volume-bar {
+    height: 100%;
+    background-color: #3b82f6; /* Cambiará después por JS */
+}
+
+.volume-value {
+    font-size: 0.9rem;
+    color: #64748b;
+    text-align: right;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .details-grid {
+        grid-template-columns: 1fr;
+    }
+}
