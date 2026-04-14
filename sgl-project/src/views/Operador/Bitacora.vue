@@ -3,14 +3,16 @@
     <form @submit.prevent="enviarRegistro" class="bitacora-form">
       <header class="form-header">
         <h2>Registro de Entrega 🚚</h2>
+        <p v-if="paradasRestantes.length > 0">Tienes {{ paradasRestantes.length }} paradas pendientes.</p>
+        <p v-else class="success-text">✨ ¡Has completado todas tus paradas de hoy!</p>
       </header>
 
       <div class="form-row">
         <div class="form-group">
           <label>Tienda Asignada 🏪</label>
-          <select v-model="form.id_tienda" @change="autoSeleccionarCadena" required>
+          <select v-model="form.id_tienda" @change="autoSeleccionarCadena" required :disabled="paradasRestantes.length === 0">
             <option :value="null" disabled>-- Seleccione la parada --</option>
-            <option v-for="t in paradasAsignadas" :key="t.id_tienda" :value="t.id_tienda">
+            <option v-for="t in paradasRestantes" :key="t.id_tienda" :value="t.id_tienda">
               Parada {{ t.orden }}: {{ t.nombre_tienda }}
             </option>
           </select>
@@ -67,9 +69,9 @@
       </div>
 
       <div class="form-actions">
-        <button type="button" @click="$router.push('/home')" class="btn-cancel">Cancelar</button>
-        <button type="submit" class="btn-submit" :disabled="guardando">
-          {{ guardando ? 'Guardando...' : 'Finalizar' }}
+        <button type="button" @click="$router.push('/home')" class="btn-cancel">Volver</button>
+        <button type="submit" class="btn-submit" :disabled="guardando || paradasRestantes.length === 0">
+          {{ guardando ? 'Guardando...' : 'Finalizar Entrega' }}
         </button>
       </div>
     </form>
@@ -83,7 +85,8 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const guardando = ref(false);
-const paradasAsignadas = ref([]);
+const paradasCompletasIds = ref([]); // IDs de tiendas ya registradas hoy
+const todasLasParadas = ref([]);     // Todas las paradas de la ruta
 const nombreCadenaSeleccionada = ref('Seleccione tienda');
 const user = JSON.parse(localStorage.getItem('user'));
 
@@ -96,13 +99,16 @@ const form = reactive({
   perecedero: 0,
   no_perecedero: 0,
   bazar: 0,
-  peso: 0, 
   fecha: new Date().toISOString().split('T')[0],
   comentarios: '',
   id_operador: null
 });
 
-// Lógica de cálculo para visualización del usuario
+// COMPUTED: Filtra las paradas para mostrar solo las pendientes en el SELECT
+const paradasRestantes = computed(() => {
+  return todasLasParadas.value.filter(p => !paradasCompletasIds.value.includes(p.id_tienda));
+});
+
 const totalCalculado = computed(() => {
   const suma = (Number(form.perecedero) || 0) + (Number(form.no_perecedero) || 0) + (Number(form.bazar) || 0);
   return parseFloat(suma.toFixed(2));
@@ -110,28 +116,34 @@ const totalCalculado = computed(() => {
 
 onMounted(async () => {
   if (!user) { router.push('/'); return; }
-  await cargarRuta();
+  await cargarDatos();
 });
 
-const cargarRuta = async () => {
+const cargarDatos = async () => {
   try {
-    const res = await axios.get(`http://localhost:3000/api/operador/mi-ruta/${user.id_colaborador}`);
-    if (res.data.length > 0) {
-      paradasAsignadas.value = res.data;
-      form.id_ruta = res.data[0].id_ruta;
-      form.id_operador = res.data[0].id_operador;
+    // 1. Obtener qué tiendas ya registró el operador hoy
+    const resComp = await axios.get(`http://localhost:3000/api/operador/paradas-completadas/${user.id_colaborador}`);
+    paradasCompletasIds.value = resComp.data;
+
+    // 2. Obtener la ruta asignada
+    const resRuta = await axios.get(`http://localhost:3000/api/operador/mi-ruta/${user.id_colaborador}`);
+    
+    if (resRuta.data.length > 0) {
+      todasLasParadas.value = resRuta.data;
+      form.id_ruta = resRuta.data[0].id_ruta;
+      form.id_operador = resRuta.data[0].id_operador;
       
-      // Formatear hora actual HH:mm
+      // Hora por defecto
       const ahora = new Date();
       form.hora_llegada = ahora.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     }
   } catch (e) {
-    console.error("Error al cargar paradas:", e);
+    console.error("Error cargando datos de bitácora:", e);
   }
 };
 
 const autoSeleccionarCadena = () => {
-  const t = paradasAsignadas.value.find(x => x.id_tienda == form.id_tienda);
+  const t = todasLasParadas.value.find(x => x.id_tienda == form.id_tienda);
   if (t) {
     form.id_cadena = t.id_cadena;
     nombreCadenaSeleccionada.value = t.nombre_cadena;
@@ -146,11 +158,11 @@ const enviarRegistro = async () => {
 
   guardando.value = true;
   try {
-    // Enviamos el formulario. 
-    // Perecedero, no_perecedero y bazar llevan las cantidades.
     const response = await axios.post('http://localhost:3000/api/bitacora', form);
-    alert(response.data.message);
-    router.push('/home');
+    alert('✅ Registro guardado correctamente');
+    
+    // Al guardar, regresamos al home (o mapa) y la tienda ya no aparecerá
+    router.push('/mapa'); 
   } catch (e) { 
     console.error(e);
     alert('❌ Error al guardar: ' + (e.response?.data?.error || 'Servidor no responde')); 

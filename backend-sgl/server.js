@@ -1,7 +1,7 @@
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
-const { exec } = require('child_process');
+const { exec } = require('child_process'); // DECLARACIÓN ÚNICA AQUÍ
 
 const app = express();
 app.use(express.json());
@@ -59,7 +59,6 @@ app.get('/api/colaboradores', (req, res) => {
     });
 });
 
-// NUEVO: Eliminar Colaborador (Faltaba este)
 app.delete('/api/colaboradores/:id', (req, res) => {
     db.query('DELETE FROM Colaborador WHERE id_colaborador = ?', [req.params.id], (err) => {
         if (err) return res.status(500).send(err);
@@ -131,6 +130,18 @@ app.post('/api/tiendas', (req, res) => {
     });
 });
 
+app.get('/api/tiendas', (req, res) => {
+    const query = `
+        SELECT t.*, c.nombre_cadena 
+        FROM Tienda t
+        INNER JOIN Cadena c ON t.id_cadena = c.id_cadena
+    `;
+    db.query(query, (err, result) => {
+        if (err) return res.status(500).send(err);
+        res.send(result);
+    });
+});
+
 // --- ACCESOS ---
 app.get('/api/colaboradores-sin-acceso', (req, res) => {
     const query = `
@@ -154,6 +165,46 @@ app.post('/api/usuarios/crear', (req, res) => {
     });
 });
 
+// --- GENERAR RUTAS (CON OPTIMIZACIÓN PYTHON) ---
+app.post('/api/rutas/generar', (req, res) => {
+    const { id_operador, tiendas } = req.body; 
+    const fecha = new Date().toISOString().split('T')[0];
+
+    db.beginTransaction((err) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        // 1. Insertamos la ruta con optimizada = 0 (Para que el VSP la encuentre)
+        const queryRuta = `INSERT INTO Ruta (fecha_creacion, id_operador, optimizada) VALUES (?, ?, 0)`;
+        db.query(queryRuta, [fecha, id_operador], (errR, result) => {
+            if (errR) return db.rollback(() => res.status(500).json({ error: errR.message }));
+
+            const nuevoIdRuta = result.insertId;
+            const valoresDetalle = tiendas.map((id_tienda, index) => [nuevoIdRuta, id_tienda, index + 1]);
+
+            const queryDetalle = `INSERT INTO Ruta_Detalle (id_ruta, id_tienda, orden) VALUES ?`;
+            db.query(queryDetalle, [valoresDetalle], (errD) => {
+                if (errD) return db.rollback(() => res.status(500).json({ error: errD.message }));
+
+                db.commit((errC) => {
+                    if (errC) return db.rollback(() => res.status(500).json({ error: errC.message }));
+
+                    // 2. AHORA llamamos a Python para que optimice lo que acabamos de guardar
+                    // No esperamos respuesta, solo dejamos que trabaje
+                    exec(`python ../AI-worker/VSP.py`, (pyErr, stdout, stderr) => {
+                        if (pyErr) console.error("Error en optimización Python:", stderr);
+                        console.log("Salida de Python:", stdout);
+                    });
+
+                    // Respondemos al usuario de una vez
+                    res.status(201).json({ 
+                        message: `✅ Ruta #${nuevoIdRuta} creada y enviada a optimización.` 
+                    });
+                });
+            });
+        });
+    });
+});
+
 // --- RUTAS (OPERADOR Y MAPA) ---
 app.get('/api/operador/mi-ruta/:id_colaborador', (req, res) => {
     const query = `
@@ -173,7 +224,7 @@ app.get('/api/operador/mi-ruta/:id_colaborador', (req, res) => {
     });
 });
 
-// --- BITÁCORA (MULTI-REGISTRO POR CATEGORÍA) ---
+// --- BITÁCORA ---
 app.post('/api/bitacora', (req, res) => {
     const { id_ruta, hora_llegada, id_tienda, id_cadena, folio, fecha, comentarios, id_operador, perecedero, no_perecedero, bazar } = req.body;
     const registros = [];
@@ -195,6 +246,19 @@ app.get('/api/perfiles', (req, res) => {
     db.query('SELECT * FROM Perfil', (err, result) => {
         if (err) return res.status(500).send(err);
         res.send(result);
+    });
+});
+
+app.get('/api/operador/paradas-completadas/:id_operador', (req, res) => {
+    const query = `
+        SELECT DISTINCT id_tienda 
+        FROM Bitacora 
+        WHERE id_operador = ? AND fecha = CURDATE()
+    `;
+    db.query(query, [req.params.id_operador], (err, result) => {
+        if (err) return res.status(500).send(err);
+        const ids = result.map(row => row.id_tienda);
+        res.send(ids);
     });
 });
 
