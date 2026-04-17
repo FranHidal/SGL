@@ -26,7 +26,7 @@
           Centrar en Destino 🎯
         </button>
       </div>
-      
+
       <div class="route-card" v-else>
         <p style="text-align: center; padding: 20px; font-weight: bold;">
           ✅ ¡Ruta completada! <br> No hay más pendientes.
@@ -49,35 +49,36 @@
         ></l-tile-layer>
 
         <l-polyline 
-          v-for="(segmento, index) in segmentosRuta" 
-          :key="'seg-'+index"
-          :lat-lngs="segmento.coords" 
-          :color="obtenerColor(index)" 
+          v-for="(seg, idx) in segmentosVisibles" 
+          :key="'seg-'+idx"
+          :lat-lngs="seg.coords" 
+          :color="'#3b82f6'" 
           :weight="6"
           :opacity="0.9"
         />
 
         <l-marker 
-          v-for="p in paradasFiltradas" 
-          :key="p.id_ruta_detalle || 'caritas-punto'" 
+          v-for="p in paradasAsignadas" 
+          :key="p.id_tienda + '-' + esCompletada(p.id_tienda)" 
           :lat-lng="[parseFloat(p.latitud), parseFloat(p.longitud)]"
         >
           <l-icon 
-            :icon-url="p.orden === 0 
-              ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png' 
-              : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png'" 
+            :icon-url="obtenerIcono(p)" 
             :icon-size="[25, 41]" 
             :icon-anchor="[12, 41]" 
             :popup-anchor="[1, -34]"
             :shadow-url="'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png'"
             :shadow-size="[41, 41]"
+            :class-name="esCompletada(p.id_tienda) ? 'marker-done' : ''"
           />
-          
           <l-popup>
-            <div style="min-width: 150px;">
-              <strong v-if="p.orden === 0" style="color: #3b82f6;">📍 CEDIS CÁRITAS</strong>
+            <div style="text-align: center;">
+              <strong v-if="esCompletada(p.id_tienda)" style="color: #10b981;">✅ COMPLETADA</strong>
+              <strong v-else-if="p.orden === 0" style="color: #3b82f6;">📍 ORIGEN</strong>
+              <strong v-else-if="p.orden === 999" style="color: #3b82f6;">🏁 REGRESO</strong>
+              <strong v-else style="color: #ef4444;">🛒 PARADA {{ p.orden }}</strong>
               <br>
-              <span style="font-size: 0.9rem;">{{ p.nombre_tienda }}</span>
+              {{ p.nombre_tienda }}
             </div>
           </l-popup>
         </l-marker>
@@ -93,7 +94,7 @@ import "leaflet/dist/leaflet.css";
 import { LMap, LTileLayer, LPolyline, LMarker, LPopup, LIcon } from "@vue-leaflet/vue-leaflet";
 import axios from 'axios';
 
-// --- CONFIGURACIÓN DE ICONOS DEFAULT (FIX LEAFLET) ---
+// --- FIX ICONOS LEAFLET ---
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -102,7 +103,6 @@ L.Icon.Default.mergeOptions({
 });
 
 const ORIGEN_CARITAS = {
-  id_ruta_detalle: 0,
   id_tienda: 0, 
   nombre_tienda: "Cáritas Quintana Roo (CEDIS)",
   latitud: 21.212901,
@@ -116,83 +116,130 @@ const paradasAsignadas = ref([]);
 const paradasCompletadasIds = ref([]);
 const segmentosRuta = ref([]);
 
-const ORS_API_KEY = 'TU_KEY_DE_OPENROUTE_AQUI'; 
-const paletaColores = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
-const obtenerColor = (index) => paletaColores[index % paletaColores.length];
+const ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImFkMzRhMTZhOTczNjQ3NDViNTdmN2IzYjY1NDlhODlhIiwiaCI6Im11cm11cjY0In0='; 
 
-// Filtra las tiendas que aún no se han registrado en la bitácora hoy
+// --- LÓGICA DE ESTADOS ---
+
+const esCompletada = (id_tienda) => {
+  if (!id_tienda || id_tienda === 0) return false;
+  return paradasCompletadasIds.value.includes(id_tienda);
+};
+
+const obtenerIcono = (p) => {
+  if (esCompletada(p.id_tienda)) {
+    return 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png';
+  }
+  if (p.orden === 0 || p.orden === 999) {
+    return 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png';
+  }
+  return 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png';
+};
+
+// --- COMPUTED PROPERTIES ---
+
 const paradasFiltradas = computed(() => {
   if (paradasAsignadas.value.length === 0) return [];
-  return paradasAsignadas.value.filter(p => 
-    p.orden === 0 || !paradasCompletadasIds.value.includes(p.id_tienda)
-  );
+  return paradasAsignadas.value.filter(p => {
+    if (p.orden === 0 || p.orden === 999) return true;
+    return !esCompletada(p.id_tienda);
+  });
 });
 
-// Obtiene la primera parada pendiente después del origen
-const siguienteParada = computed(() => {
-  if (paradasFiltradas.value.length > 1) {
-    return paradasFiltradas.value[1];
-  }
-  return paradasFiltradas.value[0] || {};
+// Filtro seguro para las líneas del mapa
+const segmentosVisibles = computed(() => {
+  return segmentosRuta.value.filter(s => {
+    if (!s) return false;
+    // Si el destino es el CEDIS final (999) se queda, si es tienda normal se apaga si está completada
+    return s.id_destino === 999 || !esCompletada(s.id_destino);
+  });
 });
+
+const siguienteParada = computed(() => {
+  return paradasFiltradas.value.length > 1 ? paradasFiltradas.value[1] : paradasFiltradas.value[0] || {};
+});
+
+// --- FUNCIONES ---
 
 const centrarMapa = () => {
-  const destino = siguienteParada.value;
-  if (destino.latitud) {
-    center.value = [parseFloat(destino.latitud), parseFloat(destino.longitud)];
+  if (siguienteParada.value.latitud) {
+    center.value = [parseFloat(siguienteParada.value.latitud), parseFloat(siguienteParada.value.longitud)];
   }
 };
 
 const cargarRutaSegmentada = async (puntos) => {
+  if (!puntos || puntos.length < 2) return;
   const tramos = [];
+
   for (let i = 0; i < puntos.length - 1; i++) {
     const origen = puntos[i];
     const destino = puntos[i + 1];
+
     try {
       const response = await axios.post(
         'https://api.openrouteservice.org/v2/directions/driving-car/geojson',
-        { coordinates: [[parseFloat(origen.longitud), parseFloat(origen.latitud)], [parseFloat(destino.longitud), parseFloat(destino.latitud)]] },
+        { 
+          coordinates: [
+            [parseFloat(origen.longitud), parseFloat(origen.latitud)], 
+            [parseFloat(destino.longitud), parseFloat(destino.latitud)]
+          ] 
+        },
         { headers: { 'Authorization': ORS_API_KEY, 'Content-Type': 'application/json' } }
       );
-      const geometry = response.data.features[0].geometry.coordinates;
-      tramos.push({ coords: geometry.map(c => [c[1], c[0]]) });
+
+      if (response.data?.features?.length > 0) {
+        const geometry = response.data.features[0].geometry.coordinates;
+        tramos.push({ 
+          id_destino: destino.orden === 999 ? 999 : (destino.id_tienda || 0),
+          coords: geometry.map(c => [c[1], c[0]]) 
+        });
+      }
     } catch (error) {
-      // Fallback a línea recta si falla la API
-      tramos.push({ coords: [[parseFloat(origen.latitud), parseFloat(origen.longitud)], [parseFloat(destino.latitud), parseFloat(destino.longitud)]] });
+      console.error("Error en tramo real:", error);
+      tramos.push({ 
+        id_destino: destino.id_tienda || 0,
+        coords: [
+          [parseFloat(origen.latitud), parseFloat(origen.longitud)], 
+          [parseFloat(destino.latitud), parseFloat(destino.longitud)]
+        ] 
+      });
     }
   }
   segmentosRuta.value = tramos;
 };
 
 onMounted(async () => {
-  const userStr = localStorage.getItem('user');
-  if (!userStr) return;
-  const user = JSON.parse(userStr);
+  const user = JSON.parse(localStorage.getItem('user'));
+  if (!user) return;
 
   try {
-    // 1. Cargar IDs de paradas ya visitadas
     const resComp = await axios.get(`http://localhost:3000/api/operador/paradas-completadas/${user.id_colaborador}`);
     paradasCompletadasIds.value = resComp.data;
 
-    // 2. Cargar ruta completa asignada
     const response = await axios.get(`http://localhost:3000/api/operador/mi-ruta/${user.id_colaborador}`);
     
     if (response.data && response.data.length > 0) {
-      const rutaCompleta = [ORIGEN_CARITAS, ...response.data];
-      paradasAsignadas.value = rutaCompleta;
+      const rutaConRegreso = [
+        ORIGEN_CARITAS, 
+        ...response.data, 
+        { ...ORIGEN_CARITAS, orden: 999, nombre_tienda: "Regreso a Cáritas" } 
+      ];
+      paradasAsignadas.value = rutaConRegreso;
       
-      // 3. Trazar solo los tramos pendientes
-      await cargarRutaSegmentada(paradasFiltradas.value);
-      
-      // Foco inicial en el origen o la siguiente parada
-      if (siguienteParada.value.latitud) {
-        center.value = [parseFloat(siguienteParada.value.latitud), parseFloat(siguienteParada.value.longitud)];
-      }
+      // Cargamos el circuito completo una sola vez
+      await cargarRutaSegmentada(rutaConRegreso);
     }
   } catch (err) {
-    console.error("Error al inicializar mapa:", err);
+    console.error("Error al cargar la ruta:", err);
   }
 });
 </script>
 
 <style scoped src="./Mapa.css"></style>
+
+<style scoped>
+:deep(.marker-done) {
+  opacity: 0.3 !important;
+  filter: grayscale(1) brightness(0.8);
+  transition: opacity 0.3s ease;
+}
+</style>

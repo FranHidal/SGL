@@ -1,7 +1,7 @@
 <template>
   <main class="menu-container">
     <header class="menu-header">
-      <h1>Panel de Administrador</h1>
+      <h1>Panel de Gerente</h1>
       <p>Bienvenido, <strong>{{ userName }}</strong>. Seleccione un módulo para comenzar.</p>
     </header>
 

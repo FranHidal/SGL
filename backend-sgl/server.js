@@ -1,7 +1,7 @@
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
-const { exec } = require('child_process'); // DECLARACIÓN ÚNICA AQUÍ
+const { exec } = require('child_process');
 
 const app = express();
 app.use(express.json());
@@ -111,13 +111,6 @@ app.get('/api/cadenas', (req, res) => {
     });
 });
 
-app.post('/api/cadenas', (req, res) => {
-    db.query('INSERT INTO Cadena (nombre_cadena) VALUES (?)', [req.body.nombre_cadena], (err) => {
-        if (err) return res.status(500).send(err);
-        res.status(201).send({ message: "Cadena registrada" });
-    });
-});
-
 app.post('/api/tiendas', (req, res) => {
     const { nombre_tienda, direccion, longitud, latitud, id_cadena, c_nombre, c_primer_apellido, c_telefono, c_correo } = req.body;
     db.query(`INSERT INTO Contacto (nombre, primer_apellido, telefono, correo_electronico) VALUES (?, ?, ?, ?)`, [c_nombre, c_primer_apellido, c_telefono, c_correo], (err, result) => {
@@ -142,30 +135,7 @@ app.get('/api/tiendas', (req, res) => {
     });
 });
 
-// --- ACCESOS ---
-app.get('/api/colaboradores-sin-acceso', (req, res) => {
-    const query = `
-        SELECT c.id_colaborador, c.nombre, c.primer_apellido, p.perfil
-        FROM Colaborador c
-        JOIN Perfil p ON c.id_perfil = p.id_perfil
-        LEFT JOIN Usuarios u ON c.id_colaborador = u.id_colaborador
-        WHERE u.id_usuario IS NULL
-    `;
-    db.query(query, (err, result) => {
-        if (err) return res.status(500).send(err);
-        res.send(result);
-    });
-});
-
-app.post('/api/usuarios/crear', (req, res) => {
-    const { id_colaborador, usuario, contrasena, rol } = req.body;
-    db.query(`INSERT INTO Usuarios (id_colaborador, usuario, contrasena, rol) VALUES (?, ?, ?, ?)`, [id_colaborador, usuario, contrasena, rol], (err) => {
-        if (err) return res.status(500).json({ error: "Usuario duplicado o error de BD" });
-        res.status(201).json({ message: "✅ Cuenta activada" });
-    });
-});
-
-// --- GENERAR RUTAS (CON OPTIMIZACIÓN PYTHON) ---
+// --- RUTAS (CREACIÓN Y OPTIMIZACIÓN) ---
 app.post('/api/rutas/generar', (req, res) => {
     const { id_operador, tiendas } = req.body; 
     const fecha = new Date().toISOString().split('T')[0];
@@ -173,7 +143,6 @@ app.post('/api/rutas/generar', (req, res) => {
     db.beginTransaction((err) => {
         if (err) return res.status(500).json({ error: err.message });
 
-        // 1. Insertamos la ruta con optimizada = 0 (Para que el VSP la encuentre)
         const queryRuta = `INSERT INTO Ruta (fecha_creacion, id_operador, optimizada) VALUES (?, ?, 0)`;
         db.query(queryRuta, [fecha, id_operador], (errR, result) => {
             if (errR) return db.rollback(() => res.status(500).json({ error: errR.message }));
@@ -188,35 +157,31 @@ app.post('/api/rutas/generar', (req, res) => {
                 db.commit((errC) => {
                     if (errC) return db.rollback(() => res.status(500).json({ error: errC.message }));
 
-                    // 2. AHORA llamamos a Python para que optimice lo que acabamos de guardar
-                    // No esperamos respuesta, solo dejamos que trabaje
                     exec(`python ../AI-worker/VSP.py`, (pyErr, stdout, stderr) => {
                         if (pyErr) console.error("Error en optimización Python:", stderr);
-                        console.log("Salida de Python:", stdout);
                     });
 
-                    // Respondemos al usuario de una vez
-                    res.status(201).json({ 
-                        message: `✅ Ruta #${nuevoIdRuta} creada y enviada a optimización.` 
-                    });
+                    res.status(201).json({ message: `✅ Ruta #${nuevoIdRuta} creada.` });
                 });
             });
         });
     });
 });
 
-// --- RUTAS (OPERADOR Y MAPA) ---
+// --- RUTAS PARA EL OPERADOR (MAPA) ---
 app.get('/api/operador/mi-ruta/:id_colaborador', (req, res) => {
     const query = `
-        SELECT rd.orden, t.id_tienda, t.nombre_tienda, t.latitud, t.longitud, rd.id_ruta_detalle, rd.id_ruta, o.id_operador, t.id_cadena, c.nombre_cadena, v.matricula
+        SELECT rd.orden, t.id_tienda, t.nombre_tienda, t.latitud, t.longitud, 
+               rd.id_ruta_detalle, rd.id_ruta, o.id_operador, t.id_cadena, 
+               c.nombre_cadena
         FROM Ruta r
         JOIN Operador o ON r.id_operador = o.id_operador
-        LEFT JOIN Vehiculo v ON o.id_vehiculo = v.id_vehiculo 
         JOIN Ruta_Detalle rd ON r.id_ruta = rd.id_ruta
         JOIN Tienda t ON rd.id_tienda = t.id_tienda
         LEFT JOIN Cadena c ON t.id_cadena = c.id_cadena
         WHERE o.id_colaborador = ? 
-        ORDER BY r.id_ruta DESC, rd.orden ASC LIMIT 50
+          AND r.fecha_creacion >= CURDATE()
+        ORDER BY r.id_ruta DESC, rd.orden ASC
     `;
     db.query(query, [req.params.id_colaborador], (err, result) => {
         if (err) return res.status(500).send(err);
@@ -224,41 +189,72 @@ app.get('/api/operador/mi-ruta/:id_colaborador', (req, res) => {
     });
 });
 
+// --- PARADAS COMPLETADAS (FILTRO CRÍTICO) ---
+app.get('/api/operador/paradas-completadas/:id_colaborador', (req, res) => {
+    const query = `
+        SELECT DISTINCT b.id_tienda 
+        FROM Bitacora b
+        WHERE b.id_ruta = (
+            SELECT MAX(id_ruta) 
+            FROM Ruta r 
+            JOIN Operador o ON r.id_operador = o.id_operador 
+            WHERE o.id_colaborador = ?
+        )
+    `;
+    db.query(query, [req.params.id_colaborador], (err, result) => {
+        if (err) return res.status(500).send(err);
+        const ids = result.map(row => row.id_tienda);
+        res.send(ids);
+    });
+});
+
 // --- BITÁCORA ---
 app.post('/api/bitacora', (req, res) => {
-    const { id_ruta, hora_llegada, id_tienda, id_cadena, folio, fecha, comentarios, id_operador, perecedero, no_perecedero, bazar } = req.body;
+    // 1. Extraemos los datos del body
+    const { 
+        id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, 
+        folio, fecha, comentarios, id_operador, 
+        perecedero, no_perecedero, bazar 
+    } = req.body;
+
     const registros = [];
-    if (parseFloat(perecedero) > 0) registros.push([id_ruta, hora_llegada, id_tienda, id_cadena, folio, parseFloat(perecedero), fecha, comentarios, id_operador, 'Perecedero']);
-    if (parseFloat(no_perecedero) > 0) registros.push([id_ruta, hora_llegada, id_tienda, id_cadena, folio, parseFloat(no_perecedero), fecha, comentarios, id_operador, 'No Perecedero']);
-    if (parseFloat(bazar) > 0) registros.push([id_ruta, hora_llegada, id_tienda, id_cadena, folio, parseFloat(bazar), fecha, comentarios, id_operador, 'Bazar']);
+
+    // 2. Armamos los arreglos con el ORDEN EXACTO de la tabla Bitacora
+    // Orden sugerido: id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, peso, fecha, comentarios, id_operador, categoria
+    
+    if (parseFloat(perecedero) > 0) {
+        registros.push([id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, parseFloat(perecedero), fecha, comentarios, id_operador, 'Perecedero']);
+    }
+    if (parseFloat(no_perecedero) > 0) {
+        registros.push([id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, parseFloat(no_perecedero), fecha, comentarios, id_operador, 'No Perecedero']);
+    }
+    if (parseFloat(bazar) > 0) {
+        registros.push([id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, parseFloat(bazar), fecha, comentarios, id_operador, 'Bazar']);
+    }
 
     if (registros.length === 0) return res.status(400).json({ error: "Ingrese al menos un peso" });
 
-    const query = `INSERT INTO Bitacora (id_ruta, hora_llegada, id_tienda, id_cadena, folio, peso, fecha, comentarios, id_operador, categoria) VALUES ?`;
+    // 3. La consulta SQL con las columnas en el mismo orden que los arreglos de arriba
+    const query = `
+        INSERT INTO Bitacora 
+        (id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, peso, fecha, comentarios, id_operador, categoria) 
+        VALUES ?
+    `;
+
     db.query(query, [registros], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) {
+            console.error("Error al insertar en Bitacora:", err); // Para que veas el error real en la consola de Laragon
+            return res.status(500).json({ error: err.message });
+        }
         res.status(201).json({ message: `✅ Éxito: ${result.affectedRows} registros creados.` });
     });
 });
 
-// --- CATALOGOS ---
+// --- CATÁLOGOS ---
 app.get('/api/perfiles', (req, res) => {
     db.query('SELECT * FROM Perfil', (err, result) => {
         if (err) return res.status(500).send(err);
         res.send(result);
-    });
-});
-
-app.get('/api/operador/paradas-completadas/:id_operador', (req, res) => {
-    const query = `
-        SELECT DISTINCT id_tienda 
-        FROM Bitacora 
-        WHERE id_operador = ? AND fecha = CURDATE()
-    `;
-    db.query(query, [req.params.id_operador], (err, result) => {
-        if (err) return res.status(500).send(err);
-        const ids = result.map(row => row.id_tienda);
-        res.send(ids);
     });
 });
 

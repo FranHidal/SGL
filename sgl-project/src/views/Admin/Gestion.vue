@@ -1,7 +1,7 @@
 <template>
   <div class="gestion-container">
     <aside class="admin-menu">
-      <h2>Panel Admin 🔐</h2>
+      <h2>Panel de Gestion</h2>
       <nav>
         <button @click="vistaActual = 'crear'" :class="['nav-item', { active: vistaActual === 'crear' }]">
           Nuevo Colaborador 👤

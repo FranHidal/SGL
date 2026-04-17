@@ -1,7 +1,7 @@
 <template>
   <main class="menu-container">
     <header class="menu-header">
-      <h1>Panel de Dirección</h1>
+      <h1>Panel de Director</h1>
       <p>Bienvenido, <strong>{{ userName }}</strong>. Resumen general de logística.</p>
     </header>
 

@@ -19,7 +19,7 @@
         <div class="kpi-card green">
           <div class="kpi-icon">🚚</div>
           <div class="kpi-data">
-            <h3>Entregas Hoy</h3>
+            <h3>Recolecciones Hoy</h3>
             <p class="number">{{ mockKpis.entregasHoy }}</p>
             <p class="status">Eficiencia: {{ mockKpis.eficiencia }}%</p>
           </div>

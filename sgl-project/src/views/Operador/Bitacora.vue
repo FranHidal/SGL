@@ -3,7 +3,9 @@
     <form @submit.prevent="enviarRegistro" class="bitacora-form">
       <header class="form-header">
         <h2>Registro de Entrega 🚚</h2>
-        <p v-if="paradasRestantes.length > 0">Tienes {{ paradasRestantes.length }} paradas pendientes.</p>
+        <p v-if="paradasRestantes.length > 0">
+          Tienes <strong>{{ paradasRestantes.length }}</strong> paradas pendientes.
+        </p>
         <p v-else class="success-text">✨ ¡Has completado todas tus paradas de hoy!</p>
       </header>
 
@@ -29,12 +31,10 @@
           <label>Perecedero</label>
           <input type="number" step="0.1" v-model.number="form.perecedero" placeholder="0.0" min="0" />
         </div>
-
         <div class="kilos-card">
           <label>No Perecedero</label>
           <input type="number" step="0.1" v-model.number="form.no_perecedero" placeholder="0.0" min="0" />
         </div>
-
         <div class="kilos-card">
           <label>Bazar</label>
           <input type="number" step="0.1" v-model.number="form.bazar" placeholder="0.0" min="0" />
@@ -50,17 +50,15 @@
           <label>Hora Llegada</label>
           <input type="time" v-model="form.hora_llegada" required />
         </div>
+        <div class="form-group">
+          <label>Hora Salida</label>
+          <input type="time" v-model="form.hora_salida" required />
+        </div>
       </div>
 
       <div class="form-group">
         <label>Peso Total Calculado (kg) ⚖️</label>
-        <input 
-          type="number" 
-          :value="totalCalculado" 
-          readonly 
-          class="input-total-auto"
-          placeholder="0.0" 
-        />
+        <input type="number" :value="totalCalculado" readonly class="input-total-auto" />
       </div>
 
       <div class="form-group">
@@ -85,14 +83,15 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const guardando = ref(false);
-const paradasCompletasIds = ref([]); // IDs de tiendas ya registradas hoy
-const todasLasParadas = ref([]);     // Todas las paradas de la ruta
+const paradasCompletasIds = ref([]); 
+const todasLasParadas = ref([]);     
 const nombreCadenaSeleccionada = ref('Seleccione tienda');
 const user = JSON.parse(localStorage.getItem('user'));
 
 const form = reactive({
   id_ruta: null,
   hora_llegada: '',
+  hora_salida: '', // Agregado
   id_tienda: null,
   id_cadena: null,
   folio: '',
@@ -104,43 +103,46 @@ const form = reactive({
   id_operador: null
 });
 
-// COMPUTED: Filtra las paradas para mostrar solo las pendientes en el SELECT
+// Función auxiliar para obtener la hora actual en formato HH:mm
+const obtenerHoraActual = () => {
+  const ahora = new Date();
+  const horas = String(ahora.getHours()).padStart(2, '0');
+  const minutos = String(ahora.getMinutes()).padStart(2, '0');
+  return `${horas}:${minutos}`;
+};
+
 const paradasRestantes = computed(() => {
   return todasLasParadas.value.filter(p => !paradasCompletasIds.value.includes(p.id_tienda));
 });
 
 const totalCalculado = computed(() => {
-  const suma = (Number(form.perecedero) || 0) + (Number(form.no_perecedero) || 0) + (Number(form.bazar) || 0);
-  return parseFloat(suma.toFixed(2));
-});
-
-onMounted(async () => {
-  if (!user) { router.push('/'); return; }
-  await cargarDatos();
+  return parseFloat(((form.perecedero || 0) + (form.no_perecedero || 0) + (form.bazar || 0)).toFixed(2));
 });
 
 const cargarDatos = async () => {
   try {
-    // 1. Obtener qué tiendas ya registró el operador hoy
     const resComp = await axios.get(`http://localhost:3000/api/operador/paradas-completadas/${user.id_colaborador}`);
     paradasCompletasIds.value = resComp.data;
 
-    // 2. Obtener la ruta asignada
     const resRuta = await axios.get(`http://localhost:3000/api/operador/mi-ruta/${user.id_colaborador}`);
-    
     if (resRuta.data.length > 0) {
       todasLasParadas.value = resRuta.data;
       form.id_ruta = resRuta.data[0].id_ruta;
       form.id_operador = resRuta.data[0].id_operador;
       
-      // Hora por defecto
-      const ahora = new Date();
-      form.hora_llegada = ahora.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      // --- ACTUALIZACIÓN DE HORAS ---
+      // Ponemos la hora actual tanto en llegada como en salida por defecto
+      const horaActual = obtenerHoraActual();
+      form.hora_llegada = horaActual;
+      form.hora_salida = horaActual; 
     }
-  } catch (e) {
-    console.error("Error cargando datos de bitácora:", e);
-  }
+  } catch (e) { console.error(e); }
 };
+
+onMounted(() => {
+  if (!user) { router.push('/'); return; }
+  cargarDatos();
+});
 
 const autoSeleccionarCadena = () => {
   const t = todasLasParadas.value.find(x => x.id_tienda == form.id_tienda);
@@ -151,6 +153,12 @@ const autoSeleccionarCadena = () => {
 };
 
 const enviarRegistro = async () => {
+  // Validación básica de tiempo: que la salida no sea antes que la llegada
+  if (form.hora_salida < form.hora_llegada) {
+    alert('⚠️ La hora de salida no puede ser anterior a la hora de llegada');
+    return;
+  }
+
   if (totalCalculado.value <= 0) {
     alert('⚠️ Por favor ingrese al menos una cantidad mayor a 0');
     return;
@@ -158,16 +166,14 @@ const enviarRegistro = async () => {
 
   guardando.value = true;
   try {
-    const response = await axios.post('http://localhost:3000/api/bitacora', form);
-    alert('✅ Registro guardado correctamente');
-    
-    // Al guardar, regresamos al home (o mapa) y la tienda ya no aparecerá
+    await axios.post('http://localhost:3000/api/bitacora', form);
+    paradasCompletasIds.value.push(form.id_tienda);
+    alert('✅ Parada registrada con éxito');
     router.push('/mapa'); 
-  } catch (e) { 
-    console.error(e);
-    alert('❌ Error al guardar: ' + (e.response?.data?.error || 'Servidor no responde')); 
-  } finally { 
-    guardando.value = false; 
+  } catch (e) {
+    alert('❌ Error: ' + (e.response?.data?.error || 'No se pudo guardar'));
+  } finally {
+    guardando.value = false;
   }
 };
 </script>
