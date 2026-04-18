@@ -22,9 +22,14 @@
             </div>
           </div>
         </div>
-        <button class="btn-primary-action" @click="centrarMapa">
-          Centrar en Destino 🎯
-        </button>
+        <div class="button-group">
+          <button class="btn-primary-action" @click="centrarMapa">
+            Destino 🎯
+          </button>
+          <button class="btn-secondary-action" @click="centrarEnMi">
+            Mi Ubicación 📍
+          </button>
+        </div>
       </div>
 
       <div class="route-card" v-else>
@@ -57,6 +62,16 @@
           :opacity="0.9"
         />
 
+        <l-marker v-if="userLocation" :lat-lng="[userLocation.lat, userLocation.lng]">
+          <l-icon
+            icon-url="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png"
+            :icon-size="[25, 41]"
+            :icon-anchor="[12, 41]"
+            class-name="gps-marker"
+          />
+          <l-popup>Estás aquí 🚛</l-popup>
+        </l-marker>
+
         <l-marker 
           v-for="p in paradasAsignadas" 
           :key="p.id_tienda + '-' + esCompletada(p.id_tienda)" 
@@ -88,13 +103,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import L from 'leaflet';
 import "leaflet/dist/leaflet.css";
 import { LMap, LTileLayer, LPolyline, LMarker, LPopup, LIcon } from "@vue-leaflet/vue-leaflet";
 import axios from 'axios';
 
-// --- FIX ICONOS LEAFLET ---
+// --- CONFIGURACIÓN ICONOS ---
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -115,10 +130,36 @@ const center = ref([21.1619, -86.8515]);
 const paradasAsignadas = ref([]);
 const paradasCompletadasIds = ref([]);
 const segmentosRuta = ref([]);
+const userLocation = ref(null);
+const watchId = ref(null);
 
 const ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImFkMzRhMTZhOTczNjQ3NDViNTdmN2IzYjY1NDlhODlhIiwiaCI6Im11cm11cjY0In0='; 
 
-// --- LÓGICA DE ESTADOS ---
+// --- GEOLOCALIZACIÓN ---
+
+const trackUbicacion = () => {
+  if (!navigator.geolocation) return;
+
+  watchId.value = navigator.geolocation.watchPosition(
+    (pos) => {
+      userLocation.value = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude
+      };
+    },
+    (err) => console.warn("Error GPS:", err),
+    { enableHighAccuracy: true }
+  );
+};
+
+const centrarEnMi = () => {
+  if (userLocation.value) {
+    center.value = [userLocation.value.lat, userLocation.value.lng];
+    zoom.value = 16;
+  }
+};
+
+// --- LÓGICA DE NEGOCIO ---
 
 const esCompletada = (id_tienda) => {
   if (!id_tienda || id_tienda === 0) return false;
@@ -126,39 +167,22 @@ const esCompletada = (id_tienda) => {
 };
 
 const obtenerIcono = (p) => {
-  if (esCompletada(p.id_tienda)) {
-    return 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png';
-  }
-  if (p.orden === 0 || p.orden === 999) {
-    return 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png';
-  }
+  if (esCompletada(p.id_tienda)) return 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png';
+  if (p.orden === 0 || p.orden === 999) return 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png';
   return 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png';
 };
 
-// --- COMPUTED PROPERTIES ---
-
 const paradasFiltradas = computed(() => {
-  if (paradasAsignadas.value.length === 0) return [];
-  return paradasAsignadas.value.filter(p => {
-    if (p.orden === 0 || p.orden === 999) return true;
-    return !esCompletada(p.id_tienda);
-  });
+  return paradasAsignadas.value.filter(p => p.orden === 0 || p.orden === 999 || !esCompletada(p.id_tienda));
 });
 
-// Filtro seguro para las líneas del mapa
 const segmentosVisibles = computed(() => {
-  return segmentosRuta.value.filter(s => {
-    if (!s) return false;
-    // Si el destino es el CEDIS final (999) se queda, si es tienda normal se apaga si está completada
-    return s.id_destino === 999 || !esCompletada(s.id_destino);
-  });
+  return segmentosRuta.value.filter(s => s && (s.id_destino === 999 || !esCompletada(s.id_destino)));
 });
 
 const siguienteParada = computed(() => {
   return paradasFiltradas.value.length > 1 ? paradasFiltradas.value[1] : paradasFiltradas.value[0] || {};
 });
-
-// --- FUNCIONES ---
 
 const centrarMapa = () => {
   if (siguienteParada.value.latitud) {
@@ -169,39 +193,22 @@ const centrarMapa = () => {
 const cargarRutaSegmentada = async (puntos) => {
   if (!puntos || puntos.length < 2) return;
   const tramos = [];
-
   for (let i = 0; i < puntos.length - 1; i++) {
     const origen = puntos[i];
     const destino = puntos[i + 1];
-
     try {
-      const response = await axios.post(
-        'https://api.openrouteservice.org/v2/directions/driving-car/geojson',
-        { 
-          coordinates: [
-            [parseFloat(origen.longitud), parseFloat(origen.latitud)], 
-            [parseFloat(destino.longitud), parseFloat(destino.latitud)]
-          ] 
-        },
+      const res = await axios.post('https://api.openrouteservice.org/v2/directions/driving-car/geojson', 
+        { coordinates: [[parseFloat(origen.longitud), parseFloat(origen.latitud)], [parseFloat(destino.longitud), parseFloat(destino.latitud)]] },
         { headers: { 'Authorization': ORS_API_KEY, 'Content-Type': 'application/json' } }
       );
-
-      if (response.data?.features?.length > 0) {
-        const geometry = response.data.features[0].geometry.coordinates;
+      if (res.data?.features?.length > 0) {
         tramos.push({ 
           id_destino: destino.orden === 999 ? 999 : (destino.id_tienda || 0),
-          coords: geometry.map(c => [c[1], c[0]]) 
+          coords: res.data.features[0].geometry.coordinates.map(c => [c[1], c[0]]) 
         });
       }
-    } catch (error) {
-      console.error("Error en tramo real:", error);
-      tramos.push({ 
-        id_destino: destino.id_tienda || 0,
-        coords: [
-          [parseFloat(origen.latitud), parseFloat(origen.longitud)], 
-          [parseFloat(destino.latitud), parseFloat(destino.longitud)]
-        ] 
-      });
+    } catch (e) {
+      tramos.push({ id_destino: destino.id_tienda || 0, coords: [[parseFloat(origen.latitud), parseFloat(origen.longitud)], [parseFloat(destino.latitud), parseFloat(destino.longitud)]] });
     }
   }
   segmentosRuta.value = tramos;
@@ -210,36 +217,48 @@ const cargarRutaSegmentada = async (puntos) => {
 onMounted(async () => {
   const user = JSON.parse(localStorage.getItem('user'));
   if (!user) return;
+  
+  trackUbicacion(); // Iniciar GPS
 
   try {
     const resComp = await axios.get(`http://localhost:3000/api/operador/paradas-completadas/${user.id_colaborador}`);
     paradasCompletadasIds.value = resComp.data;
-
     const response = await axios.get(`http://localhost:3000/api/operador/mi-ruta/${user.id_colaborador}`);
-    
-    if (response.data && response.data.length > 0) {
-      const rutaConRegreso = [
-        ORIGEN_CARITAS, 
-        ...response.data, 
-        { ...ORIGEN_CARITAS, orden: 999, nombre_tienda: "Regreso a Cáritas" } 
-      ];
+    if (response.data?.length > 0) {
+      const rutaConRegreso = [ORIGEN_CARITAS, ...response.data, { ...ORIGEN_CARITAS, orden: 999, nombre_tienda: "Regreso a Cáritas" }];
       paradasAsignadas.value = rutaConRegreso;
-      
-      // Cargamos el circuito completo una sola vez
       await cargarRutaSegmentada(rutaConRegreso);
     }
-  } catch (err) {
-    console.error("Error al cargar la ruta:", err);
-  }
+  } catch (err) { console.error(err); }
+});
+
+onUnmounted(() => {
+  if (watchId.value) navigator.geolocation.clearWatch(watchId.value);
 });
 </script>
 
 <style scoped src="./Mapa.css"></style>
-
 <style scoped>
 :deep(.marker-done) {
   opacity: 0.3 !important;
   filter: grayscale(1) brightness(0.8);
-  transition: opacity 0.3s ease;
+}
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+.btn-secondary-action {
+  flex: 1;
+  background: white;
+  border: 2px solid #3b82f6;
+  color: #3b82f6;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+:deep(.gps-marker) {
+  filter: hue-rotate(140deg) brightness(1.2); /* Hace que el azul del GPS resalte más */
 }
 </style>
