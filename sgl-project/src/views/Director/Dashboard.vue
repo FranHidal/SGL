@@ -96,7 +96,7 @@
               <div class="volume-bar-container">
                 <div class="volume-bar" :style="{ width: cadena.volumen + '%' }"></div>
               </div>
-              <span class="volume-value">{{ cadena.entregas }} envíos</span>
+              <span class="volume-value">{{ cadena.entregas }} Kg</span>
             </div>
           </div>
         </div>
@@ -132,14 +132,14 @@ const mockRutas = ref([
   { id: 101, operador: 'Juan Pérez', vehiculo: 'Nissan (TS-123)', progreso: 85, estado: 'En Ruta' },
   { id: 102, operador: 'Ana Gómez', vehiculo: 'Ford (TS-456)', progreso: 100, estado: 'Completada' },
   { id: 103, operador: 'Carlos Díaz', vehiculo: 'Isuzu (TS-789)', progreso: 45, estado: 'En Ruta' },
-  { id: 104, operador: 'Luis Torres', vehiculo: 'Nissan (TS-012)', progreso: 10, estado: 'Retrasada' }
+  { id: 104, operador: 'Luis Torres', vehiculo: 'Nissan (TS-012)', progreso: 100, estado: 'Completada' }
 ]);
 
 const mockCadenas = ref([
-  { nombre: 'Oxxo', entregas: 65, volumen: 80 },
-  { nombre: '7-Eleven', entregas: 42, volumen: 60 },
-  { nombre: 'Chedraui', entregas: 28, volumen: 45 },
-  { nombre: 'Walmart', entregas: 10, volumen: 20 }
+  { nombre: 'Oxxo', entregas: 80, volumen: 80 },
+  { nombre: '7-Eleven', entregas: 60, volumen: 60 },
+  { nombre: 'Chedraui', entregas: 45, volumen: 45 },
+  { nombre: 'Walmart', entregas: 20, volumen: 20 }
 ]);
 
 // Lógica visual para los badges de la tabla

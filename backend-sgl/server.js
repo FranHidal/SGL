@@ -82,7 +82,7 @@ app.post('/api/vehiculos', (req, res) => {
     });
 });
 
-// --- ASIGNACIONES ---
+// --- ASIGNACIONES DE UNIDADES ---
 app.get('/api/operadores-unidades', (req, res) => {
     const query = `
         SELECT o.id_operador, c.nombre, c.primer_apellido, v.id_vehiculo, v.marca, v.modelo, v.matricula
@@ -135,7 +135,7 @@ app.get('/api/tiendas', (req, res) => {
     });
 });
 
-// --- RUTAS (CREACIÓN Y OPTIMIZACIÓN) ---
+// --- cREACIÓN Y OPTIMIZACIÓN DE RUTAS ---
 app.post('/api/rutas/generar', (req, res) => {
     const { id_operador, tiendas } = req.body; 
     const fecha = new Date().toISOString().split('T')[0];
@@ -158,10 +158,64 @@ app.post('/api/rutas/generar', (req, res) => {
                     if (errC) return db.rollback(() => res.status(500).json({ error: errC.message }));
 
                     exec(`python ../AI-worker/VSP.py`, (pyErr, stdout, stderr) => {
-                        if (pyErr) console.error("Error en optimización Python:", stderr);
+                        if (pyErr) {
+                            console.error("❌ ERROR CRÍTICO EN PYTHON:");
+                            console.error(stderr); // Aquí verás el Traceback real (el error de código)
+                        }
+                        if (stdout) {
+                            console.log("🐍 MENSAJE DE PYTHON:");
+                            console.log(stdout); // Aquí verás tus prints de "Optimizando..."
+                        }
                     });
 
                     res.status(201).json({ message: `✅ Ruta #${nuevoIdRuta} creada.` });
+                });
+            });
+        });
+    });
+});
+
+// --- VISUALIZACIÓN DE RUTAS ---
+app.get('/api/rutas/historial', (req, res) => {
+    const query = `
+        SELECT 
+            r.id_ruta, 
+            r.fecha_creacion, 
+            r.optimizada,
+            c.nombre AS nombre_operador,
+            c.primer_apellido,
+            GROUP_CONCAT(t.nombre_tienda ORDER BY rd.orden SEPARATOR ' ➔ ') AS itinerario
+        FROM Ruta r
+        JOIN Operador o ON r.id_operador = o.id_operador
+        JOIN Colaborador c ON o.id_colaborador = c.id_colaborador
+        JOIN Ruta_Detalle rd ON r.id_ruta = rd.id_ruta
+        JOIN Tienda t ON rd.id_tienda = t.id_tienda
+        GROUP BY r.id_ruta
+        ORDER BY r.id_ruta DESC
+    `;
+    db.query(query, (err, result) => {
+        if (err) return res.status(500).send(err);
+        res.send(result);
+    });
+});
+
+app.delete('/api/rutas/:id', (req, res) => {
+    const id_ruta = req.params.id;
+
+    db.beginTransaction((err) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        // 1. Borrar primero los detalles (por la llave foránea)
+        db.query('DELETE FROM Ruta_Detalle WHERE id_ruta = ?', [id_ruta], (errD) => {
+            if (errD) return db.rollback(() => res.status(500).json({ error: errD.message }));
+
+            // 2. Borrar la ruta principal
+            db.query('DELETE FROM Ruta WHERE id_ruta = ?', [id_ruta], (errR) => {
+                if (errR) return db.rollback(() => res.status(500).json({ error: errR.message }));
+
+                db.commit((errC) => {
+                    if (errC) return db.rollback(() => res.status(500).json({ error: errC.message }));
+                    res.send({ message: `✅ Ruta #${id_ruta} eliminada correctamente.` });
                 });
             });
         });
@@ -189,7 +243,7 @@ app.get('/api/operador/mi-ruta/:id_colaborador', (req, res) => {
     });
 });
 
-// --- PARADAS COMPLETADAS (FILTRO CRÍTICO) ---
+// --- PARADAS COMPLETADAS ---
 app.get('/api/operador/paradas-completadas/:id_colaborador', (req, res) => {
     const query = `
         SELECT DISTINCT b.id_tienda 
@@ -210,8 +264,7 @@ app.get('/api/operador/paradas-completadas/:id_colaborador', (req, res) => {
 
 // --- BITÁCORA ---
 app.post('/api/bitacora', (req, res) => {
-    // 1. Extraemos los datos del body
-    const { 
+        const { 
         id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, 
         folio, fecha, comentarios, id_operador, 
         perecedero, no_perecedero, bazar 
@@ -219,9 +272,6 @@ app.post('/api/bitacora', (req, res) => {
 
     const registros = [];
 
-    // 2. Armamos los arreglos con el ORDEN EXACTO de la tabla Bitacora
-    // Orden sugerido: id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, peso, fecha, comentarios, id_operador, categoria
-    
     if (parseFloat(perecedero) > 0) {
         registros.push([id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, parseFloat(perecedero), fecha, comentarios, id_operador, 'Perecedero']);
     }
@@ -234,7 +284,6 @@ app.post('/api/bitacora', (req, res) => {
 
     if (registros.length === 0) return res.status(400).json({ error: "Ingrese al menos un peso" });
 
-    // 3. La consulta SQL con las columnas en el mismo orden que los arreglos de arriba
     const query = `
         INSERT INTO Bitacora 
         (id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, peso, fecha, comentarios, id_operador, categoria) 

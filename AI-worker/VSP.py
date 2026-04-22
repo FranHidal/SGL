@@ -1,16 +1,15 @@
 import mysql.connector
 import openrouteservice
-from openrouteservice import exceptions # Importamos excepciones de ORS
+from openrouteservice import exceptions
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 import numpy as np
-import time
+import sys
 
 # ===============================
-# 1. CONFIGURACIÓN Y CONEXIÓN
+# 1. CONFIGURACIÓN
 # ===============================
 
-# Implementamos el timeout de 60 segundos y activamos reintentos automáticos 
-# en caso de superar el límite de velocidad de la API (Rate Limit).
+# Configuración de ORS con Timeout y reintentos automáticos
 ORS_CLIENT = openrouteservice.Client(
     key="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImFkMzRhMTZhOTczNjQ3NDViNTdmN2IzYjY1NDlhODlhIiwiaCI6Im11cm11cjY0In0=",
     timeout=60, 
@@ -25,108 +24,166 @@ def get_db_connection():
         database="sgl_bd"
     )
 
-# CEDIS FIJO (Punto de partida en Rancho Viejo)
-CEDIS = {"id": 0, "nombre": "CEDIS Rancho Viejo", "lng": -86.842340, "lat": 21.213016}
+# CEDIS FIJO (ID 0 para la matriz de caché)
+CEDIS = {"id_tienda": 0, "nombre": "CEDIS Rancho Viejo", "lng": -86.842340, "lat": 21.213016}
 
 # ===============================
 # 2. LÓGICA DE OPTIMIZACIÓN
 # ===============================
+
 def optimizar_rutas_pendientes():
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
 
-    # Buscar rutas que el gerente creó pero Python no ha ordenado
-    cursor.execute("SELECT id_ruta, id_operador FROM Ruta WHERE optimizada = 0")
+    # 1. Buscar rutas que no han sido procesadas
+    cursor.execute("SELECT id_ruta FROM Ruta WHERE optimizada = 0")
     rutas_pendientes = cursor.fetchall()
+
+    if not rutas_pendientes:
+        print("No hay rutas pendientes de optimización.")
+        return
 
     for ruta in rutas_pendientes:
         id_ruta = ruta['id_ruta']
-        print(f"\n--- Optimizando Ruta #{id_ruta} ---")
+        print(f"\n--- Iniciando optimización de Ruta #{id_ruta} ---")
 
-        # Traer las tiendas de esta ruta específica
+        # 2. Obtener las tiendas de la ruta
         query_tiendas = """
-            SELECT rd.id_ruta_detalle, t.nombre_tienda, t.longitud, t.latitud 
+            SELECT rd.id_ruta_detalle, t.id_tienda, t.longitud, t.latitud 
             FROM Ruta_Detalle rd
             JOIN Tienda t ON rd.id_tienda = t.id_tienda
             WHERE rd.id_ruta = %s
         """
         cursor.execute(query_tiendas, (id_ruta,))
-        puntos_ruta = cursor.fetchall()
+        puntos_db = cursor.fetchall()
 
-        if not puntos_ruta: 
-            print(f"Ruta #{id_ruta} no tiene tiendas asignadas.")
+        if not puntos_db:
+            print(f"Ruta #{id_ruta} vacía. Saltando...")
             continue
 
-        # Construir lista de coordenadas: [CEDIS, Tienda 1, Tienda 2...]
-        tiendas_data = [CEDIS] + [
-            {"id_rd": p['id_ruta_detalle'], "nombre": p['nombre_tienda'], "lng": float(p['longitud']), "lat": float(p['latitud'])} 
-            for p in puntos_ruta
+        # Estructura de nodos: [0: CEDIS, 1: TiendaA, 2: TiendaB...]
+        nodos = [CEDIS] + [
+            {
+                "id_tienda": p['id_tienda'], 
+                "lng": float(p['longitud']), 
+                "lat": float(p['latitud']), 
+                "id_rd": p['id_ruta_detalle']
+            } for p in puntos_db
         ]
         
-        coords = [[t["lng"], t["lat"]] for t in tiendas_data]
-        
-        # ==========================================
-        # LLAMADA A LA API CON MANEJO DE ERRORES
-        # ==========================================
-        try:
-            print(f"Solicitando matriz de tiempos para {len(coords)} puntos...")
-            matrix = ORS_CLIENT.distance_matrix(
-                locations=coords, 
-                profile='driving-car', 
-                metrics=['duration']
-            )
-            time_matrix = matrix['durations']
-        except exceptions.Timeout:
-            print(f"ERROR: Tiempo de espera agotado en Ruta #{id_ruta}. Saltando...")
-            continue
-        except exceptions.ApiError as e:
-            print(f"ERROR DE API en Ruta #{id_ruta}: {e}")
-            continue
-        except Exception as e:
-            print(f"ERROR INESPERADO: {e}")
-            continue
+        n = len(nodos)
+        time_matrix = np.zeros((n, n))
+        dist_matrix = np.zeros((n, n))
+        faltan_datos_cache = False
 
-        # --- CONFIGURAR OR-TOOLS ---
-        n = len(coords)
-        manager = pywrapcp.RoutingIndexManager(n, 1, 0) # 1 vehículo por ruta
+        # 3. Intentar llenar la matriz desde la BASE DE DATOS (Caché)
+        print(f"Verificando caché local para {n} puntos...")
+        for i in range(n):
+            for j in range(n):
+                if i == j: continue
+                
+                id_a = nodos[i]['id_tienda']
+                id_b = nodos[j]['id_tienda']
+
+                cursor.execute(
+                    "SELECT duracion_segundos FROM matriz_cache WHERE id_origen = %s AND id_destino = %s", 
+                    (id_a, id_b)
+                )
+                cache_hit = cursor.fetchone()
+
+                if cache_hit:
+                    time_matrix[i][j] = cache_hit['duracion_segundos']
+                else:
+                    faltan_datos_cache = True
+
+        # 4. Si falta información, llamamos a la API de Matrix (Una sola petición)
+        if faltan_datos_cache:
+            try:
+                print("Faltan datos en caché. Solicitando matriz completa a ORS...")
+                coords = [[t["lng"], t["lat"]] for t in nodos]
+                
+                # Pedimos la matriz de duración a la API
+                matrix_res = ORS_CLIENT.distance_matrix(
+                    locations=coords,
+                    profile='driving-car',
+                    metrics=['duration', 'distance']
+                )
+                
+                durations = matrix_res['durations']
+                distances = matrix_res['distances']
+
+                # Guardamos TODOS los datos nuevos en la BD de un solo golpe
+                for i in range(n):
+                    for j in range(n):
+                        if i == j: continue
+                        duracion = durations[i][j]
+                        distancia = distances[i][j]
+                        
+                        if duracion is not None:
+                            time_matrix[i][j] = duracion
+                            dist_matrix[i][j] = distancia
+                            # Insertamos en caché (IGNORE para evitar errores si ya existía el par)
+                            cursor.execute("""
+                                INSERT IGNORE INTO matriz_cache (id_origen, id_destino, duracion_segundos, distancia_metros) 
+                                VALUES (%s, %s, %s, %s)
+                            """, (nodos[i]['id_tienda'], nodos[j]['id_tienda'], int(duracion), int(distancia)))
+                
+                db.commit()
+                print("Caché actualizado con éxito.")
+
+            except Exception as e:
+                print(f"Error crítico consultando la API: {e}")
+                # Si no hay datos suficientes para armar la ruta, saltamos
+                if not np.any(time_matrix): continue 
+
+        # 5. Configurar OR-TOOLS (TSP)
+        manager = pywrapcp.RoutingIndexManager(n, 1, 0)
         routing = pywrapcp.RoutingModel(manager)
 
         def time_callback(from_index, to_index):
             from_node = manager.IndexToNode(from_index)
             to_node = manager.IndexToNode(to_index)
-            # Manejamos posibles valores nulos de la API
-            val = time_matrix[from_node][to_node]
-            return int(val) if val is not None else 999999
+            return int(time_matrix[from_node][to_node])
 
         transit_callback_index = routing.RegisterTransitCallback(time_callback)
         routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
 
         search_parameters = pywrapcp.DefaultRoutingSearchParameters()
-        search_parameters.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+        search_parameters.first_solution_strategy = (
+            routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+        )
 
+        # 6. Resolver
         solution = routing.SolveWithParameters(search_parameters)
 
         if solution:
-            # Extraer el orden óptimo
+            print(f"Solución encontrada para Ruta #{id_ruta}.")
             index = routing.Start(0)
-            orden_contador = 1
-            while not routing.IsEnd(index):
-                node = manager.IndexToNode(index)
-                if node != 0: # Saltamos el CEDIS (index 0) para actualizar tiendas
-                    id_rd = tiendas_data[node]['id_rd']
-                    cursor.execute("UPDATE Ruta_Detalle SET orden = %s WHERE id_ruta_detalle = %s", (orden_contador, id_rd))
-                    orden_contador += 1
-                index = solution.Value(routing.NextVar(index))
+            orden_secuencia = 1
             
-            # Marcar ruta como optimizada
+            while not routing.IsEnd(index):
+                node_index = manager.IndexToNode(index)
+                if node_index != 0:
+                    id_rd = nodos[node_index]['id_rd']
+                    cursor.execute(
+                        "UPDATE Ruta_Detalle SET orden = %s WHERE id_ruta_detalle = %s", 
+                        (orden_secuencia, id_rd)
+                    )
+                    orden_secuencia += 1
+                index = solution.Value(routing.NextVar(index))
+
             cursor.execute("UPDATE Ruta SET optimizada = 1 WHERE id_ruta = %s", (id_ruta,))
             db.commit()
-            print(f"ÉXITO: Ruta #{id_ruta} optimizada y guardada.")
+            print(f"Ruta #{id_ruta} guardada con éxito.")
         else:
-            print(f"No se encontró solución para Ruta #{id_ruta}.")
+            print(f"No se pudo encontrar una ruta óptima para #{id_ruta}.")
 
     cursor.close()
     db.close()
 
 if __name__ == "__main__":
-    optimizar_rutas_pendientes()
+    try:
+        optimizar_rutas_pendientes()
+    except Exception as e:
+        print(f"CRITICAL ERROR: {e}")
+        sys.exit(1)

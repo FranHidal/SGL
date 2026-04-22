@@ -209,3 +209,18 @@ input[type="checkbox"] {
     color: white;
 }
 
+.btn-delete-mini {
+  background-color: #fee2e2;
+  color: #ef4444;
+  border: 1px solid #fca5a5;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.2s;
+}
+
+.btn-delete-mini:hover {
+  background-color: #ef4444;
+  color: white;
+}
