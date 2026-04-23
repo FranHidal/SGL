@@ -135,7 +135,29 @@ app.get('/api/tiendas', (req, res) => {
     });
 });
 
-// --- cREACIÓN Y OPTIMIZACIÓN DE RUTAS ---
+// Ruta para registrar una nueva cadena de tiendas
+app.post('/api/cadenas', (req, res) => {
+    const { nombre_cadena } = req.body;
+
+    if (!nombre_cadena) {
+        return res.status(400).json({ error: "El nombre de la cadena es obligatorio" });
+    }
+
+    const query = "INSERT INTO Cadena (nombre_cadena) VALUES (?)";
+
+    db.query(query, [nombre_cadena], (err, result) => {
+        if (err) {
+            console.error("Error al insertar cadena:", err);
+            return res.status(500).json({ error: "Error en la base de datos" });
+        }
+        res.status(201).json({ 
+            message: "Cadena registrada con éxito", 
+            id_cadena: result.insertId 
+        });
+    });
+});
+
+// --- CREACIÓN Y OPTIMIZACIÓN DE RUTAS ---
 app.post('/api/rutas/generar', (req, res) => {
     const { id_operador, tiendas } = req.body; 
     const fecha = new Date().toISOString().split('T')[0];
