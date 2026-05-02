@@ -103,6 +103,52 @@ app.put('/api/operadores/:id', (req, res) => {
     });
 });
 
+// OBTENER COLABORADORES SIN ACCESO
+app.get('/api/colaboradores-sin-acceso', (req, res) => {
+    const query = `
+        SELECT 
+            c.id_colaborador, 
+            c.nombre, 
+            c.primer_apellido, 
+            p.perfil 
+        FROM Colaborador c
+        INNER JOIN Perfil p ON c.id_perfil = p.id_perfil
+        LEFT JOIN Usuarios u ON c.id_colaborador = u.id_colaborador
+        WHERE u.id_usuario IS NULL
+    `;
+
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: "Error al obtener lista" });
+        }
+        res.json(results);
+    });
+});
+
+ // CREACION DE USUARIOS
+app.post('/api/usuarios/crear', (req, res) => {
+    const { id_colaborador, usuario, contrasena, rol } = req.body;
+
+    const rolesPermitidos = ['admin', 'operador'];
+    const rolSeguro = rolesPermitidos.includes(rol) ? rol : 'operador';
+
+    const query = `
+        INSERT INTO Usuarios (id_colaborador, usuario, contrasena, rol) 
+        VALUES (?, ?, ?, ?)
+    `;
+
+    db.query(query, [id_colaborador, usuario, contrasena, rolSeguro], (err, result) => {
+        if (err) {
+            if (err.code === 'ER_DUP_ENTRY') {
+                return res.status(400).json({ error: "Ese nombre de usuario ya existe" });
+            }
+            return res.status(500).json({ error: "Error al crear cuenta" });
+        }
+        res.json({ message: "¡Acceso activado correctamente! 🚀" });
+    });
+});
+
 // --- TIENDAS Y CADENAS ---
 app.get('/api/cadenas', (req, res) => {
     db.query('SELECT * FROM Cadena', (err, result) => {
