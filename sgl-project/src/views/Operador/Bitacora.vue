@@ -159,7 +159,7 @@ const enviarRegistro = async () => {
     return;
   }
 
-  if (totalCalculado.value <= 0) {
+  if (totalCalculado.value <= -1) {
     alert('⚠️ Por favor ingrese al menos una cantidad mayor a 0');
     return;
   }
