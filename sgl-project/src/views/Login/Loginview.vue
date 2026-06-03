@@ -2,8 +2,7 @@
   <main class="login-wrapper">
     <div class="login-container">
       <section class="login-image-section">
-        <h2>Sistema de Gestión Logística</h2>
-        <p>Control total de tu cadena de suministro</p>
+        <h2>Sistema Inteligente de Cáritas</h2>
       </section>
 
       <section class="login-form-section">

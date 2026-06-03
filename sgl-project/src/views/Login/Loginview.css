@@ -21,18 +21,19 @@
 /* Columna de la Imagen */
 .login-image-section {
   flex: 1;
-  background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), 
-                    url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2070&auto=format&fit=crop');
+  background-image: linear-gradient(rgba(0, 0, 0, 0.204), rgba(255, 255, 255, 0.292)), url('../../assets/Logo_Caritas.png');
   background-size: cover;
   background-position: center;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
-  color: white;
+  color: rgb(0, 0, 0);
   padding: 40px;
   text-align: center;
 }
+
+
 
 /* Columna del Formulario */
 .login-form-section {

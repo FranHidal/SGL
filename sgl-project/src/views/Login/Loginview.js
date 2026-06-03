@@ -13,10 +13,13 @@ export default {
       password: ''
     });
 
+    // Detecta automáticamente si está en local o en el servidor 🚀
+    const apiUrl = import.meta.env.VITE_API_URL;
+
     const submitLogin = async () => {
       try {
-        // Hacemos la petición POST al servidor de Node
-        const response = await axios.post('http://localhost:3000/login', {
+        // Corrección de la plantilla de texto usando backticks ``
+        const response = await axios.post(`${apiUrl}/login`, {
           usuario: credentials.usuario,
           password: credentials.password
         });
@@ -26,11 +29,10 @@ export default {
           const user = response.data.user;
           console.log('Sesión iniciada para:', user.nombre);
           
-          // 1. GUARDADO UNIFICADO (La "llave" que el Router y el Mapa esperan)
-          // Guardamos el objeto completo convertido a String
+          // 1. GUARDADO UNIFICADO
           localStorage.setItem('user', JSON.stringify(user));
           
-          // 2. REDIRECCIÓN INTELIGENTE (Convertimos a minúsculas para evitar fallos)
+          // 2. REDIRECCIÓN INTELIGENTE 
           const rol = user.rol.toLowerCase();
 
           if (rol === 'admin') {
@@ -48,7 +50,7 @@ export default {
         if (error.response && error.response.status === 401) {
           alert('Usuario o contraseña incorrectos.');
         } else {
-          alert('Error de conexión. Verifica que el servidor Node esté corriendo.');
+          alert('Error de conexión. Verifica que el backend esté corriendo en: ' + apiUrl);
         }
         console.error('Error en el login:', error);
       }

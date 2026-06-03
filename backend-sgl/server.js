@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
@@ -9,10 +10,11 @@ app.use(cors());
 
 // 1. Conexión a la BD
 const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '', 
-    database: 'sgl_bd'
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'SICA_BD',
+    port: process.env.DB_PORT || 3306
 });
 
 db.connect(err => {
