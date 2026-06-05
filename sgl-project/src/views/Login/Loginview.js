@@ -19,7 +19,7 @@ export default {
     const submitLogin = async () => {
       try {
         // Corrección de la plantilla de texto usando backticks ``
-        const response = await axios.post('/login', {
+        const response = await axios.post('login', {
           usuario: credentials.usuario,
           password: credentials.password
         });

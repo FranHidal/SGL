@@ -22,8 +22,11 @@ db.connect(err => {
     console.log('✅ Conectado a la base de datos MySQL');
 });
 
+// 2. Creación del Enrutador Global para agrupar bajo /api
+const apiRouter = express.Router();
+
 // --- LOGIN ---
-app.post('/login', (req, res) => {
+apiRouter.post('/login', (req, res) => {
     const { usuario, password } = req.body;
     const query = `
         SELECT u.usuario, u.rol, c.nombre, c.id_colaborador
@@ -39,7 +42,7 @@ app.post('/login', (req, res) => {
 });
 
 // --- COLABORADORES ---
-app.post('/colaboradores', (req, res) => {
+apiRouter.post('/colaboradores', (req, res) => {
     const { nombre, primer_apellido, segundo_apellido, telefono, id_perfil, turno, horario } = req.body;
     const queryCol = `INSERT INTO Colaborador (nombre, primer_apellido, segundo_apellido, telefono, id_perfil, turno, horario) VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
@@ -54,14 +57,14 @@ app.post('/colaboradores', (req, res) => {
     });
 });
 
-app.get('/colaboradores', (req, res) => {
+apiRouter.get('/colaboradores', (req, res) => {
     db.query(`SELECT c.*, p.perfil as nombre_perfil FROM Colaborador c JOIN Perfil p ON c.id_perfil = p.id_perfil`, (err, result) => {
         if (err) return res.status(500).send(err);
         res.send(result);
     });
 });
 
-app.delete('/colaboradores/:id', (req, res) => {
+apiRouter.delete('/colaboradores/:id', (req, res) => {
     db.query('DELETE FROM Colaborador WHERE id_colaborador = ?', [req.params.id], (err) => {
         if (err) return res.status(500).send(err);
         res.send({ message: "Colaborador eliminado" });
@@ -69,14 +72,14 @@ app.delete('/colaboradores/:id', (req, res) => {
 });
 
 // --- VEHÍCULOS ---
-app.get('/vehiculos', (req, res) => {
+apiRouter.get('/vehiculos', (req, res) => {
     db.query('SELECT * FROM Vehiculo', (err, result) => {
         if (err) return res.status(500).send(err);
         res.send(result);
     });
 });
 
-app.post('/vehiculos', (req, res) => {
+apiRouter.post('/vehiculos', (req, res) => {
     const { marca, modelo, matricula, fecha_mantenimiento } = req.body;
     db.query('INSERT INTO Vehiculo (marca, modelo, matricula, fecha_mantenimiento) VALUES (?, ?, ?, ?)', [marca, modelo, matricula, fecha_mantenimiento], (err) => {
         if (err) return res.status(500).send(err);
@@ -85,7 +88,7 @@ app.post('/vehiculos', (req, res) => {
 });
 
 // --- ASIGNACIONES DE UNIDADES ---
-app.get('/operadores-unidades', (req, res) => {
+apiRouter.get('/operadores-unidades', (req, res) => {
     const query = `
         SELECT o.id_operador, c.nombre, c.primer_apellido, v.id_vehiculo, v.marca, v.modelo, v.matricula
         FROM Operador o
@@ -98,7 +101,7 @@ app.get('/operadores-unidades', (req, res) => {
     });
 });
 
-app.put('/operadores/:id', (req, res) => {
+apiRouter.put('/operadores/:id', (req, res) => {
     db.query('UPDATE Operador SET id_vehiculo = ? WHERE id_operador = ?', [req.body.id_vehiculo, req.params.id], (err) => {
         if (err) return res.status(500).send(err);
         res.send({ message: "Asignación actualizada" });
@@ -106,7 +109,7 @@ app.put('/operadores/:id', (req, res) => {
 });
 
 // OBTENER COLABORADORES SIN ACCESO
-app.get('/colaboradores-sin-acceso', (req, res) => {
+apiRouter.get('/colaboradores-sin-acceso', (req, res) => {
     const query = `
         SELECT 
             c.id_colaborador, 
@@ -128,8 +131,8 @@ app.get('/colaboradores-sin-acceso', (req, res) => {
     });
 });
 
- // CREACION DE USUARIOS
-app.post('/usuarios/crear', (req, res) => {
+// CREACION DE USUARIOS
+apiRouter.post('/usuarios/crear', (req, res) => {
     const { id_colaborador, usuario, contrasena, rol } = req.body;
 
     const rolesPermitidos = ['admin', 'operador'];
@@ -152,14 +155,14 @@ app.post('/usuarios/crear', (req, res) => {
 });
 
 // --- TIENDAS Y CADENAS ---
-app.get('/cadenas', (req, res) => {
+apiRouter.get('/cadenas', (req, res) => {
     db.query('SELECT * FROM Cadena', (err, result) => {
         if (err) return res.status(500).send(err);
         res.send(result);
     });
 });
 
-app.post('/tiendas', (req, res) => {
+apiRouter.post('/tiendas', (req, res) => {
     const { nombre_tienda, direccion, longitud, latitud, id_cadena, c_nombre, c_primer_apellido, c_telefono, c_correo } = req.body;
     db.query(`INSERT INTO Contacto (nombre, primer_apellido, telefono, correo_electronico) VALUES (?, ?, ?, ?)`, [c_nombre, c_primer_apellido, c_telefono, c_correo], (err, result) => {
         if (err) return res.status(500).json({ error: "Error en Contacto" });
@@ -171,7 +174,7 @@ app.post('/tiendas', (req, res) => {
     });
 });
 
-app.get('/tiendas', (req, res) => {
+apiRouter.get('/tiendas', (req, res) => {
     const query = `
         SELECT t.*, c.nombre_cadena 
         FROM Tienda t
@@ -183,8 +186,7 @@ app.get('/tiendas', (req, res) => {
     });
 });
 
-// Ruta para registrar una nueva cadena de tiendas
-app.post('/cadenas', (req, res) => {
+apiRouter.post('/cadenas', (req, res) => {
     const { nombre_cadena } = req.body;
 
     if (!nombre_cadena) {
@@ -206,7 +208,7 @@ app.post('/cadenas', (req, res) => {
 });
 
 // --- CREACIÓN Y OPTIMIZACIÓN DE RUTAS ---
-app.post('/rutas/generar', (req, res) => {
+apiRouter.post('/rutas/generar', (req, res) => {
     const { id_operador, tiendas } = req.body; 
     const fecha = new Date().toISOString().split('T')[0];
 
@@ -230,11 +232,11 @@ app.post('/rutas/generar', (req, res) => {
                     exec(`python ../AI-worker/VSP.py`, (pyErr, stdout, stderr) => {
                         if (pyErr) {
                             console.error("❌ ERROR CRÍTICO EN PYTHON:");
-                            console.error(stderr); // Aquí verás el Traceback real (el error de código)
+                            console.error(stderr);
                         }
                         if (stdout) {
                             console.log("🐍 MENSAJE DE PYTHON:");
-                            console.log(stdout); // Aquí verás tus prints de "Optimizando..."
+                            console.log(stdout);
                         }
                     });
 
@@ -246,7 +248,7 @@ app.post('/rutas/generar', (req, res) => {
 });
 
 // --- VISUALIZACIÓN DE RUTAS ---
-app.get('/rutas/historial', (req, res) => {
+apiRouter.get('/rutas/historial', (req, res) => {
     const query = `
         SELECT 
             r.id_ruta, 
@@ -269,17 +271,15 @@ app.get('/rutas/historial', (req, res) => {
     });
 });
 
-app.delete('/rutas/:id', (req, res) => {
+apiRouter.delete('/rutas/:id', (req, res) => {
     const id_ruta = req.params.id;
 
     db.beginTransaction((err) => {
         if (err) return res.status(500).json({ error: err.message });
 
-        // 1. Borrar primero los detalles (por la llave foránea)
         db.query('DELETE FROM Ruta_Detalle WHERE id_ruta = ?', [id_ruta], (errD) => {
             if (errD) return db.rollback(() => res.status(500).json({ error: errD.message }));
 
-            // 2. Borrar la ruta principal
             db.query('DELETE FROM Ruta WHERE id_ruta = ?', [id_ruta], (errR) => {
                 if (errR) return db.rollback(() => res.status(500).json({ error: errR.message }));
 
@@ -293,7 +293,7 @@ app.delete('/rutas/:id', (req, res) => {
 });
 
 // --- RUTAS PARA EL OPERADOR (MAPA) ---
-app.get('/operador/mi-ruta/:id_colaborador', (req, res) => {
+apiRouter.get('/operador/mi-ruta/:id_colaborador', (req, res) => {
     const query = `
         SELECT rd.orden, t.id_tienda, t.nombre_tienda, t.latitud, t.longitud, 
                rd.id_ruta_detalle, rd.id_ruta, o.id_operador, t.id_cadena, 
@@ -314,7 +314,7 @@ app.get('/operador/mi-ruta/:id_colaborador', (req, res) => {
 });
 
 // --- PARADAS COMPLETADAS ---
-app.get('/operador/paradas-completadas/:id_colaborador', (req, res) => {
+apiRouter.get('/operador/paradas-completadas/:id_colaborador', (req, res) => {
     const query = `
         SELECT DISTINCT b.id_tienda 
         FROM Bitacora b
@@ -333,8 +333,8 @@ app.get('/operador/paradas-completadas/:id_colaborador', (req, res) => {
 });
 
 // --- BITÁCORA ---
-app.post('/bitacora', (req, res) => {
-        const { 
+apiRouter.post('/bitacora', (req, res) => {
+    const { 
         id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, 
         folio, fecha, comentarios, id_operador, 
         perecedero, no_perecedero, bazar 
@@ -362,7 +362,7 @@ app.post('/bitacora', (req, res) => {
 
     db.query(query, [registros], (err, result) => {
         if (err) {
-            console.error("Error al insertar en Bitacora:", err); // Para que veas el error real en la consola de Laragon
+            console.error("Error al insertar en Bitacora:", err);
             return res.status(500).json({ error: err.message });
         }
         res.status(201).json({ message: `✅ Éxito: ${result.affectedRows} registros creados.` });
@@ -370,11 +370,14 @@ app.post('/bitacora', (req, res) => {
 });
 
 // --- CATÁLOGOS ---
-app.get('/perfiles', (req, res) => {
+apiRouter.get('/perfiles', (req, res) => {
     db.query('SELECT * FROM Perfil', (err, result) => {
         if (err) return res.status(500).send(err);
         res.send(result);
     });
 });
+
+// 🌟 INYECCIÓN GLOBAL DEL PREFIJO PARA EL ENTORNO DE PRODUCCIÓN/LOCAL
+app.use('/api', apiRouter);
 
 app.listen(3000, () => console.log('🚀 Servidor Cáritas Cancún en puerto 3000'));
