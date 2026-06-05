@@ -12,7 +12,7 @@
   background: white;
   border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 15px 35px rgba(255, 255, 255, 0.2);
   width: 900px;
   max-width: 95%;
   min-height: 550px;
@@ -21,7 +21,7 @@
 /* Columna de la Imagen */
 .login-image-section {
   flex: 1;
-  background-image: linear-gradient(rgba(0, 0, 0, 0.204), rgba(255, 255, 255, 0.292)), url('../../assets/Logo_Caritas.png');
+  background-image: url('../../assets/Logo_Caritas.png');
   background-size: cover;
   background-position: center;
   display: flex;
@@ -72,11 +72,70 @@
 .submit-button {
   width: 100%;
   padding: 14px;
-  background: #3b82f6;
+  background: #bd0000;
   color: white;
   border: none;
   border-radius: 8px;
   font-weight: bold;
   cursor: pointer;
   margin-top: 10px;
+}
+
+/* ==========================================================================
+   MÓVIL: Reglas para pantallas de teléfonos y tablets (Menos de 768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+  .login-wrapper {
+    padding: 10px; /* Menos margen exterior en celular */
+  }
+
+  .login-container {
+    flex-direction: column; /* 🔄 Cambia de horizontal a vertical */
+    width: 100%;
+    max-width: 450px; /* Evita que el contenedor se estire demasiado a lo ancho en pantallas medianas */
+    min-height: auto; /* Dejamos que la altura se adapte al contenido */
+    border-radius: 16px; /* Suavizamos un poco las esquinas en móvil */
+  }
+
+  /* La sección del logotipo ahora será un banner superior elegante */
+  .login-image-section {
+    flex: none; /* Desactivamos el comportamiento de estirarse al revés */
+    width: 120%;
+    margin-left: -15%;
+    height: 180px; /* 📐 Altura fija para el logo en formato móvil */
+    padding: 20px;
+    background-size: contain; /* 💡 IMPORTANTE: Evita que el logo se corte feo */
+    background-repeat: no-repeat;
+    background-color: #ffffff; /* Fondo claro por si el logo tiene transparencias */
+    background-position: center top;
+  }
+
+  /* La sección del formulario toma todo el protagonismo abajo */
+  .login-form-section {
+    flex: none;
+    width: 90%;
+    padding: 30px 24px; /* Reducimos el colchón interno para no perder espacio de pantalla */
+  }
+
+  .login-header h1 {
+    font-size: 1.6rem; /* Título un poco más compacto */
+    text-align: center;
+  }
+
+  .login-header p {
+    text-align: center;
+    font-size: 0.9rem;
+  }
+
+  /* Modificación amigable para los dedos (Touch) */
+  .field input {
+    padding: 14px 12px; /* Inputs un pelín más altos para facilitar el toque */
+    font-size: 16px; /* ⚠️ TRUCO: Evita que Safari en iPhone haga un zoom automático molesto */
+  }
+
+  .submit-button {
+    padding: 16px; /* Botón más grande para picarle fácil con el pulgar */
+    margin-top: 5px;
+    background-color: #bd0000;
+  }
 }

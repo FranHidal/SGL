@@ -198,8 +198,10 @@ import { reactive, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 
+
 const router = useRouter();
 const vistaActual = ref('crear');
+const apiUrl = import.meta.env.VITE_API_URL;
 
 // Datos de Estado
 const perfiles = ref([]);
@@ -221,9 +223,9 @@ onMounted(() => { cargarCatalogos(); });
 const cargarCatalogos = async () => {
   try {
     const [resP, resV, resC] = await Promise.all([
-      axios.get('http://localhost:3000/api/perfiles'),
-      axios.get('http://localhost:3000/api/vehiculos'),
-      axios.get('http://localhost:3000/api/cadenas')
+      axios.get('/perfiles'),
+      axios.get('/vehiculos'),
+      axios.get('/cadenas')
     ]);
     perfiles.value = resP.data;
     listaVehiculos.value = resV.data;
@@ -233,7 +235,7 @@ const cargarCatalogos = async () => {
 
 const registrarColaborador = async () => {
   try {
-    await axios.post('http://localhost:3000/api/colaboradores', form);
+    await axios.post('/colaboradores', form);
     alert("Colaborador registrado exitosamente.");
     Object.assign(form, { nombre: '', primer_apellido: '', segundo_apellido: '', telefono: '', id_perfil: null });
   } catch (err) { alert("Error al registrar personal"); }
@@ -243,7 +245,7 @@ const cambiarAVehiculos = () => { vistaActual.value = 'vehiculos'; cargarCatalog
 
 const registrarVehiculo = async () => {
   try {
-    await axios.post('http://localhost:3000/api/vehiculos', vehiculoForm);
+    await axios.post('/vehiculos', vehiculoForm);
     alert("Vehículo guardado.");
     Object.assign(vehiculoForm, { marca: '', modelo: '', matricula: '', fecha_mantenimiento: '' });
     cargarCatalogos();
@@ -252,13 +254,13 @@ const registrarVehiculo = async () => {
 
 const abrirAsignaciones = async () => {
   vistaActual.value = 'asignaciones';
-  const res = await axios.get('http://localhost:3000/api/operadores-unidades');
+  const res = await axios.get('/operadores-unidades');
   listaOperadoresRelacion.value = res.data.map(op => ({ ...op, nuevo_id_vehiculo: op.id_vehiculo }));
 };
 
 const actualizarAsignacion = async (op) => {
   try {
-    await axios.put(`http://localhost:3000/api/operadores/${op.id_operador}`, { id_vehiculo: op.nuevo_id_vehiculo });
+    await axios.put('/operadores/${op.id_operador}', { id_vehiculo: op.nuevo_id_vehiculo });
     alert("Unidad vinculada.");
     abrirAsignaciones();
   } catch (err) { alert("Error al actualizar"); }
@@ -266,13 +268,13 @@ const actualizarAsignacion = async (op) => {
 
 const cargarColaboradores = async () => {
   vistaActual.value = 'lista';
-  const res = await axios.get('http://localhost:3000/api/colaboradores');
+  const res = await axios.get('/colaboradores');
   colaboradores.value = res.data;
 };
 
 const eliminarColaborador = async (id) => {
   if (confirm("¿Eliminar?")) {
-    await axios.delete(`http://localhost:3000/api/colaboradores/${id}`);
+    await axios.delete('/colaboradores/${id}');
     cargarColaboradores();
   }
 };
@@ -280,14 +282,14 @@ const eliminarColaborador = async (id) => {
 const abrirTiendas = () => { vistaActual.value = 'tiendas'; cargarCatalogos(); };
 
 const registrarCadena = async () => {
-  await axios.post('http://localhost:3000/api/cadenas', cadenaForm);
+  await axios.post('/cadenas', cadenaForm);
   cadenaForm.nombre_cadena = '';
   cargarCatalogos();
 };
 
 const registrarTienda = async () => {
   try {
-    const res = await axios.post('http://localhost:3000/api/tiendas', tiendaForm);
+    const res = await axios.post('/tiendas', tiendaForm);
     alert("✅ " + res.data.message);
     Object.assign(tiendaForm, { nombre_tienda: '', direccion: '', latitud: null, longitud: null, id_cadena: null, c_nombre: '', c_primer_apellido: '', c_telefono: '', c_correo: '' });
   } catch (err) { alert("Error al registrar tienda"); }
@@ -295,13 +297,13 @@ const registrarTienda = async () => {
 
 const abrirAccesos = async () => {
   vistaActual.value = 'accesos';
-  const res = await axios.get('http://localhost:3000/api/colaboradores-sin-acceso');
+  const res = await axios.get('/colaboradores-sin-acceso');
   listaSinAcceso.value = res.data;
 };
 
 const crearAcceso = async () => {
   try {
-    const res = await axios.post('http://localhost:3000/api/usuarios/crear', accesoForm);
+    const res = await axios.post('/usuarios/crear', accesoForm);
     alert(res.data.message);
     Object.assign(accesoForm, { id_colaborador: null, usuario: '', contrasena: '', rol: 'operador' });
     abrirAccesos();

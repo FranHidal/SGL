@@ -2,12 +2,11 @@
   <main class="login-wrapper">
     <div class="login-container">
       <section class="login-image-section">
-        <h2>Sistema Inteligente de Cáritas</h2>
       </section>
 
       <section class="login-form-section">
         <header class="login-header">
-          <h1>Bienvenido</h1>
+          <h1>Sistema Inteligente de Cáritas</h1>
           <p>Ingresa tus datos de acceso</p>
         </header>
 

@@ -39,7 +39,7 @@ app.post('/login', (req, res) => {
 });
 
 // --- COLABORADORES ---
-app.post('/api/colaboradores', (req, res) => {
+app.post('/colaboradores', (req, res) => {
     const { nombre, primer_apellido, segundo_apellido, telefono, id_perfil, turno, horario } = req.body;
     const queryCol = `INSERT INTO Colaborador (nombre, primer_apellido, segundo_apellido, telefono, id_perfil, turno, horario) VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
@@ -54,14 +54,14 @@ app.post('/api/colaboradores', (req, res) => {
     });
 });
 
-app.get('/api/colaboradores', (req, res) => {
+app.get('/colaboradores', (req, res) => {
     db.query(`SELECT c.*, p.perfil as nombre_perfil FROM Colaborador c JOIN Perfil p ON c.id_perfil = p.id_perfil`, (err, result) => {
         if (err) return res.status(500).send(err);
         res.send(result);
     });
 });
 
-app.delete('/api/colaboradores/:id', (req, res) => {
+app.delete('/colaboradores/:id', (req, res) => {
     db.query('DELETE FROM Colaborador WHERE id_colaborador = ?', [req.params.id], (err) => {
         if (err) return res.status(500).send(err);
         res.send({ message: "Colaborador eliminado" });
@@ -69,14 +69,14 @@ app.delete('/api/colaboradores/:id', (req, res) => {
 });
 
 // --- VEHÍCULOS ---
-app.get('/api/vehiculos', (req, res) => {
+app.get('/vehiculos', (req, res) => {
     db.query('SELECT * FROM Vehiculo', (err, result) => {
         if (err) return res.status(500).send(err);
         res.send(result);
     });
 });
 
-app.post('/api/vehiculos', (req, res) => {
+app.post('/vehiculos', (req, res) => {
     const { marca, modelo, matricula, fecha_mantenimiento } = req.body;
     db.query('INSERT INTO Vehiculo (marca, modelo, matricula, fecha_mantenimiento) VALUES (?, ?, ?, ?)', [marca, modelo, matricula, fecha_mantenimiento], (err) => {
         if (err) return res.status(500).send(err);
@@ -85,7 +85,7 @@ app.post('/api/vehiculos', (req, res) => {
 });
 
 // --- ASIGNACIONES DE UNIDADES ---
-app.get('/api/operadores-unidades', (req, res) => {
+app.get('/operadores-unidades', (req, res) => {
     const query = `
         SELECT o.id_operador, c.nombre, c.primer_apellido, v.id_vehiculo, v.marca, v.modelo, v.matricula
         FROM Operador o
@@ -98,7 +98,7 @@ app.get('/api/operadores-unidades', (req, res) => {
     });
 });
 
-app.put('/api/operadores/:id', (req, res) => {
+app.put('/operadores/:id', (req, res) => {
     db.query('UPDATE Operador SET id_vehiculo = ? WHERE id_operador = ?', [req.body.id_vehiculo, req.params.id], (err) => {
         if (err) return res.status(500).send(err);
         res.send({ message: "Asignación actualizada" });
@@ -106,7 +106,7 @@ app.put('/api/operadores/:id', (req, res) => {
 });
 
 // OBTENER COLABORADORES SIN ACCESO
-app.get('/api/colaboradores-sin-acceso', (req, res) => {
+app.get('/colaboradores-sin-acceso', (req, res) => {
     const query = `
         SELECT 
             c.id_colaborador, 
@@ -129,7 +129,7 @@ app.get('/api/colaboradores-sin-acceso', (req, res) => {
 });
 
  // CREACION DE USUARIOS
-app.post('/api/usuarios/crear', (req, res) => {
+app.post('/usuarios/crear', (req, res) => {
     const { id_colaborador, usuario, contrasena, rol } = req.body;
 
     const rolesPermitidos = ['admin', 'operador'];
@@ -152,14 +152,14 @@ app.post('/api/usuarios/crear', (req, res) => {
 });
 
 // --- TIENDAS Y CADENAS ---
-app.get('/api/cadenas', (req, res) => {
+app.get('/cadenas', (req, res) => {
     db.query('SELECT * FROM Cadena', (err, result) => {
         if (err) return res.status(500).send(err);
         res.send(result);
     });
 });
 
-app.post('/api/tiendas', (req, res) => {
+app.post('/tiendas', (req, res) => {
     const { nombre_tienda, direccion, longitud, latitud, id_cadena, c_nombre, c_primer_apellido, c_telefono, c_correo } = req.body;
     db.query(`INSERT INTO Contacto (nombre, primer_apellido, telefono, correo_electronico) VALUES (?, ?, ?, ?)`, [c_nombre, c_primer_apellido, c_telefono, c_correo], (err, result) => {
         if (err) return res.status(500).json({ error: "Error en Contacto" });
@@ -171,7 +171,7 @@ app.post('/api/tiendas', (req, res) => {
     });
 });
 
-app.get('/api/tiendas', (req, res) => {
+app.get('/tiendas', (req, res) => {
     const query = `
         SELECT t.*, c.nombre_cadena 
         FROM Tienda t
@@ -184,7 +184,7 @@ app.get('/api/tiendas', (req, res) => {
 });
 
 // Ruta para registrar una nueva cadena de tiendas
-app.post('/api/cadenas', (req, res) => {
+app.post('/cadenas', (req, res) => {
     const { nombre_cadena } = req.body;
 
     if (!nombre_cadena) {
@@ -206,7 +206,7 @@ app.post('/api/cadenas', (req, res) => {
 });
 
 // --- CREACIÓN Y OPTIMIZACIÓN DE RUTAS ---
-app.post('/api/rutas/generar', (req, res) => {
+app.post('/rutas/generar', (req, res) => {
     const { id_operador, tiendas } = req.body; 
     const fecha = new Date().toISOString().split('T')[0];
 
@@ -246,7 +246,7 @@ app.post('/api/rutas/generar', (req, res) => {
 });
 
 // --- VISUALIZACIÓN DE RUTAS ---
-app.get('/api/rutas/historial', (req, res) => {
+app.get('/rutas/historial', (req, res) => {
     const query = `
         SELECT 
             r.id_ruta, 
@@ -269,7 +269,7 @@ app.get('/api/rutas/historial', (req, res) => {
     });
 });
 
-app.delete('/api/rutas/:id', (req, res) => {
+app.delete('/rutas/:id', (req, res) => {
     const id_ruta = req.params.id;
 
     db.beginTransaction((err) => {
@@ -293,7 +293,7 @@ app.delete('/api/rutas/:id', (req, res) => {
 });
 
 // --- RUTAS PARA EL OPERADOR (MAPA) ---
-app.get('/api/operador/mi-ruta/:id_colaborador', (req, res) => {
+app.get('/operador/mi-ruta/:id_colaborador', (req, res) => {
     const query = `
         SELECT rd.orden, t.id_tienda, t.nombre_tienda, t.latitud, t.longitud, 
                rd.id_ruta_detalle, rd.id_ruta, o.id_operador, t.id_cadena, 
@@ -314,7 +314,7 @@ app.get('/api/operador/mi-ruta/:id_colaborador', (req, res) => {
 });
 
 // --- PARADAS COMPLETADAS ---
-app.get('/api/operador/paradas-completadas/:id_colaborador', (req, res) => {
+app.get('/operador/paradas-completadas/:id_colaborador', (req, res) => {
     const query = `
         SELECT DISTINCT b.id_tienda 
         FROM Bitacora b
@@ -333,7 +333,7 @@ app.get('/api/operador/paradas-completadas/:id_colaborador', (req, res) => {
 });
 
 // --- BITÁCORA ---
-app.post('/api/bitacora', (req, res) => {
+app.post('/bitacora', (req, res) => {
         const { 
         id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, 
         folio, fecha, comentarios, id_operador, 
@@ -370,7 +370,7 @@ app.post('/api/bitacora', (req, res) => {
 });
 
 // --- CATÁLOGOS ---
-app.get('/api/perfiles', (req, res) => {
+app.get('/perfiles', (req, res) => {
     db.query('SELECT * FROM Perfil', (err, result) => {
         if (err) return res.status(500).send(err);
         res.send(result);

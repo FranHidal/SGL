@@ -13,13 +13,13 @@ export default {
       password: ''
     });
 
-    // Detecta automáticamente si está en local o en el servidor 🚀
+    // Detecta automáticamente si está en local o en el servidor
     const apiUrl = import.meta.env.VITE_API_URL;
 
     const submitLogin = async () => {
       try {
         // Corrección de la plantilla de texto usando backticks ``
-        const response = await axios.post(`${apiUrl}/login`, {
+        const response = await axios.post('/login', {
           usuario: credentials.usuario,
           password: credentials.password
         });
