@@ -260,7 +260,7 @@ const abrirAsignaciones = async () => {
 
 const actualizarAsignacion = async (op) => {
   try {
-    await axios.put('/operadores/${op.id_operador}', { id_vehiculo: op.nuevo_id_vehiculo });
+    await axios.post(`/operadores/${op.id_operador}`, { id_vehiculo: op.nuevo_id_vehiculo });
     alert("Unidad vinculada.");
     abrirAsignaciones();
   } catch (err) { alert("Error al actualizar"); }
@@ -274,7 +274,7 @@ const cargarColaboradores = async () => {
 
 const eliminarColaborador = async (id) => {
   if (confirm("¿Eliminar?")) {
-    await axios.delete('/colaboradores/${id}');
+    await axios.delete(`/colaboradores/${id}`);
     cargarColaboradores();
   }
 };

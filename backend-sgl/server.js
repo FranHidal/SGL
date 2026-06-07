@@ -101,9 +101,12 @@ apiRouter.get('/operadores-unidades', (req, res) => {
     });
 });
 
-apiRouter.put('/operadores/:id', (req, res) => {
+apiRouter.post('/operadores/:id', (req, res) => {
     db.query('UPDATE Operador SET id_vehiculo = ? WHERE id_operador = ?', [req.body.id_vehiculo, req.params.id], (err) => {
-        if (err) return res.status(500).send(err);
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: "Error al actualizar" });
+        }
         res.send({ message: "Asignación actualizada" });
     });
 });
