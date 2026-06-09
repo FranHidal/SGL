@@ -138,7 +138,7 @@ apiRouter.get('/colaboradores-sin-acceso', (req, res) => {
 apiRouter.post('/usuarios/crear', (req, res) => {
     const { id_colaborador, usuario, contrasena, rol } = req.body;
 
-    const rolesPermitidos = ['admin', 'operador'];
+    const rolesPermitidos = ['admin', 'operador', 'director'];
     const rolSeguro = rolesPermitidos.includes(rol) ? rol : 'operador';
 
     const query = `
