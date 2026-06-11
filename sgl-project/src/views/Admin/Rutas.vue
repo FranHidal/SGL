@@ -142,9 +142,9 @@ const plan = reactive({
 
 const cargarDatos = async () => {
   const [resOp, resTiendas, resHist] = await Promise.all([
-    axios.get('http://localhost:3000/api/operadores-unidades'),
-    axios.get('http://localhost:3000/api/tiendas'),
-    axios.get('http://localhost:3000/api/rutas/historial')
+    axios.get('/operadores-unidades'),
+    axios.get('/tiendas'),
+    axios.get('/rutas/historial')
   ]);
   operadores.value = resOp.data;
   tiendas.value = resTiendas.data;
@@ -160,7 +160,7 @@ watch(tabActual, (newTab) => {
 
 const crearRuta = async () => {
   try {
-    const res = await axios.post('http://localhost:3000/api/rutas/generar', {
+    const res = await axios.post('/rutas/generar', {
       id_operador: plan.id_operador,
       tiendas: plan.seleccionadas
     });
@@ -186,7 +186,7 @@ const eliminarRuta = async (id) => {
   }
 
   try {
-    const res = await axios.delete(`http://localhost:3000/api/rutas/${id}`);
+    const res = await axios.delete(`/rutas/${id}`);
     alert(res.data.message);
     cargarDatos(); // Recargamos la tabla para que desaparezca la ruta
   } catch (err) {

@@ -4,6 +4,8 @@ from openrouteservice import exceptions
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 import numpy as np
 import sys
+from dotenv import load_dotenv
+import os
 
 # ===============================
 # 1. CONFIGURACIÓN
@@ -16,12 +18,15 @@ ORS_CLIENT = openrouteservice.Client(
     retry_over_query_limit=True
 )
 
+load_dotenv()
+
 def get_db_connection():
     return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="sgl_bd"
+        host=os.getenv('DB_HOST', 'localhost'),
+        user=os.getenv('DB_USER', 'root'),
+        password=os.getenv('DB_PASSWORD', ''),
+        database=os.getenv('DB_NAME', 'SICA_BD'), 
+        port=int(os.getenv('DB_PORT', 3306))    
     )
 
 # CEDIS FIJO (ID 0 para la matriz de caché)
