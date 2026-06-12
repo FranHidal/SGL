@@ -221,9 +221,9 @@ onMounted(async () => {
   trackUbicacion(); // Iniciar GPS
 
   try {
-    const resComp = await axios.get(`http://localhost:3000/api/operador/paradas-completadas/${user.id_colaborador}`);
+    const resComp = await axios.get(`/operador/paradas-completadas/${user.id_colaborador}`);
     paradasCompletadasIds.value = resComp.data;
-    const response = await axios.get(`http://localhost:3000/api/operador/mi-ruta/${user.id_colaborador}`);
+    const response = await axios.get(`/operador/mi-ruta/${user.id_colaborador}`);
     if (response.data?.length > 0) {
       const rutaConRegreso = [ORIGEN_CARITAS, ...response.data, { ...ORIGEN_CARITAS, orden: 999, nombre_tienda: "Regreso a Cáritas" }];
       paradasAsignadas.value = rutaConRegreso;
@@ -259,6 +259,6 @@ onUnmounted(() => {
   cursor: pointer;
 }
 :deep(.gps-marker) {
-  filter: hue-rotate(140deg) brightness(1.2); /* Hace que el azul del GPS resalte más */
+  filter: hue-rotate(140deg) brightness(1.2);
 }
 </style>
