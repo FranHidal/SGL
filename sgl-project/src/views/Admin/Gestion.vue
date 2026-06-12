@@ -161,8 +161,10 @@
                 <label>Rol</label>
                 <select v-model="accesoForm.rol" required>
                   <option value="operador">Operador</option>
-                  <option value="admin">Administrador</option>
+                  <option value="admin">Gerente</option>
                   <option value="director">Director</option>
+                  <option value="almacen">Almacen</option>
+                  <option value="adminvo">Administrativo</option>
                 </select>
               </div>
             </div>
