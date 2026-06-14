@@ -380,6 +380,52 @@ apiRouter.get('/perfiles', (req, res) => {
     });
 });
 
+
+// --- GPS --- //
+apiRouter.post('/operador/actualizar-ubicacion', (req, res) => {
+    const { id_colaborador, latitud, longitud } = req.body;
+
+    if (!id_colaborador || !latitud || !longitud) {
+        return res.status(400).json({ error: "Faltan parámetros requeridos" });
+    }
+
+    const query = `
+        UPDATE Operador 
+        SET latitud_actual = ?, longitud_actual = ?, ultima_conexion = NOW()
+        WHERE id_colaborador = ?
+    `;
+
+    db.query(query, [latitud, longitud, id_colaborador], (err, result) => {
+        if (err) {
+            console.error("Error al actualizar GPS del operador:", err);
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ message: "Ubicación actualizada correctamente 📡" });
+    });
+});
+
+apiRouter.get('/admin/ubicacion-operadores', (req, res) => {
+    const query = `
+        SELECT 
+            o.id_operador, 
+            c.nombre, 
+            c.primer_apellido, 
+            v.matricula, 
+            o.latitud_actual, 
+            o.longitud_actual, 
+            o.ultima_conexion
+        FROM Operador o
+        JOIN Colaborador c ON o.id_colaborador = c.id_colaborador
+        LEFT JOIN Vehiculo v ON o.id_vehiculo = v.id_vehiculo
+        WHERE o.latitud_actual IS NOT NULL AND o.longitud_actual IS NOT NULL
+    `;
+
+    db.query(query, (err, result) => {
+        if (err) return res.status(500).send(err);
+        res.send(result);
+    });
+});
+
 // 🌟 INYECCIÓN GLOBAL DEL PREFIJO PARA EL ENTORNO DE PRODUCCIÓN/LOCAL
 app.use('/api', apiRouter);
 

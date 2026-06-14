@@ -132,23 +132,61 @@ const paradasCompletadasIds = ref([]);
 const segmentosRuta = ref([]);
 const userLocation = ref(null);
 const watchId = ref(null);
+const ultimaActualizacionServidor = ref(0);
 
 const ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImFkMzRhMTZhOTczNjQ3NDViNTdmN2IzYjY1NDlhODlhIiwiaCI6Im11cm11cjY0In0='; 
 
 // --- GEOLOCALIZACIÓN ---
 
 const trackUbicacion = () => {
-  if (!navigator.geolocation) return;
+  if (!navigator.geolocation) {
+    console.warn("La geolocalización no es soportada por este navegador.");
+    return;
+  }
 
   watchId.value = navigator.geolocation.watchPosition(
     (pos) => {
+      const nuevaLat = pos.coords.latitude;
+      const nuevaLng = pos.coords.longitude;
+
+      // 1. Actualización inmediata para el mapa local del Operador
       userLocation.value = {
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude
+        lat: nuevaLat,
+        lng: nuevaLng
       };
+
+      // 2. Reporte silencioso al Backend (Optimizado por tiempo)
+      const ahora = Date.now();
+      const tiempoTranscurrido = ahora - ultimaActualizacionServidor.value;
+
+      // Solo enviamos al servidor si han pasado más de 15 segundos (15000 ms) desde el último UPDATE
+      if (tiempoTranscurrido >= 15000) {
+        const user = JSON.parse(localStorage.getItem('user'));
+        
+        if (user && user.id_colaborador) {
+          axios.post('/operador/actualizar-ubicacion', {
+            id_colaborador: user.id_colaborador,
+            latitud: nuevaLat,
+            longitud: nuevaLng
+          })
+          .then(() => {
+            // Guardamos la estampa de tiempo del envío exitoso
+            ultimaActualizacionServidor.value = ahora;
+          })
+          .catch((err) => {
+            console.error("Error enviando coordenadas de rastreo al servidor:", err);
+          });
+        }
+      }
     },
-    (err) => console.warn("Error GPS:", err),
-    { enableHighAccuracy: true }
+    (err) => {
+      console.warn("Error crítico de GPS:", err);
+    },
+    { 
+      enableHighAccuracy: true, // Fuerza al dispositivo a usar el GPS real y no solo triangulación de red
+      timeout: 10000,           // Espera máximo 10 segundos por respuesta del hardware
+      maximumAge: 0             // Evita que use posiciones guardadas en caché de ejecuciones viejas
+    }
   );
 };
 
