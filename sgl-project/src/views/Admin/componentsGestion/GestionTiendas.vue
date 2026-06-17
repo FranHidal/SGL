@@ -34,6 +34,48 @@
       </form>
     </div>
   </div>
+
+  <div class="form-card" style="margin-top: 30px;">
+    <h3>Sucursales Registradas</h3>
+    <div class="table-card">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tienda</th>
+            <th>Cadena</th>
+            <th>Dirección</th>
+            <th>Contacto</th>
+            <th>Teléfono / Correo</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="t in listaTiendas" :key="t.id_tienda">
+            <td>#{{ t.id_tienda }}</td>
+            <td><strong>{{ t.nombre_tienda }}</strong></td>
+            <td><span class="badge info">{{ t.nombre_cadena }}</span></td>
+            <td>{{ t.direccion }}</td>
+            <td>{{ t.contacto_nombre }} {{ t.contacto_apellido }}</td>
+            <td>
+              {{ t.telefono }} <br>
+              <span style="font-size: 0.85rem; color: #64748b;">{{ t.correo_electronico }}</span>
+            </td>
+            <td>
+              <button @click="eliminarTienda(t.id_tienda, t.id_contacto)" class="btn-delete">
+                Eliminar
+              </button>
+            </td>
+          </tr>
+          <tr v-if="listaTiendas.length === 0">
+            <td colspan="7" style="text-align: center; color: #64748b; padding: 20px;">
+              No hay tiendas dadas de alta en el directorio.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -41,21 +83,28 @@ import { reactive, ref, onMounted } from 'vue';
 import axios from 'axios';
 
 const listaCadenas = ref([]);
+const listaTiendas = ref([]); // 🌟 Almacena las tiendas para la tabla
 const cadenaForm = reactive({ nombre_cadena: '' });
 const tiendaForm = reactive({ nombre_tienda: '', direccion: '', latitud: null, longitud: null, id_cadena: null, c_nombre: '', c_primer_apellido: '', c_telefono: '', c_correo: '' });
 
-const cargarCadenas = async () => {
-  const res = await axios.get('/cadenas');
-  listaCadenas.value = res.data;
+const cargarDatos = async () => {
+  try {
+    const [resCadenas, resTiendas] = await Promise.all([
+      axios.get('/cadenas'),
+      axios.get('/tiendas') // Consumirá tu GET del backend
+    ]);
+    listaCadenas.value = resCadenas.data;
+    listaTiendas.value = resTiendas.data;
+  } catch (err) { console.error("Error al cargar listados:", err); }
 };
 
-onMounted(cargarCadenas);
+onMounted(cargarDatos);
 
 const registrarCadena = async () => {
   if (!cadenaForm.nombre_cadena) return;
   await axios.post('/cadenas', cadenaForm);
   cadenaForm.nombre_cadena = '';
-  cargarCadenas();
+  cargarDatos();
 };
 
 const registrarTienda = async () => {
@@ -63,7 +112,24 @@ const registrarTienda = async () => {
     const res = await axios.post('/tiendas', tiendaForm);
     alert("✅ " + res.data.message);
     Object.assign(tiendaForm, { nombre_tienda: '', direccion: '', latitud: null, longitud: null, id_cadena: null, c_nombre: '', c_primer_apellido: '', c_telefono: '', c_correo: '' });
+    cargarDatos(); // Recargar tabla
   } catch (err) { alert("Error al registrar tienda"); }
+};
+
+// 🌟 FUNCIÓN PARA ELIMINAR EL REGISTRO COMPLETO
+const eliminarTienda = async (idTienda, idContacto) => {
+  if (!confirm("¿Está seguro de eliminar esta sucursal junto con su información de contacto? Esta acción es irreversible.")) {
+    return;
+  }
+
+  try {
+    const res = await axios.delete(`/tiendas/${idTienda}/${idContacto}`);
+    alert(res.data.message);
+    cargarDatos(); // Refrescar vista
+  } catch (err) {
+    console.error(err);
+    alert(err.response?.data?.error || "No se pudo eliminar la tienda. Verifique si está asignada a una ruta activa.");
+  }
 };
 </script>
 
@@ -126,5 +192,39 @@ const registrarTienda = async () => {
 .btn-save:hover {
   background-color: #2563eb;
   transform: translateY(-1px);
+}
+.table-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 15px;
+  margin-bottom: 30px;
+}
+
+.badge {
+  padding: 10px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.table-card td {
+  padding: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.badge.info { background-color: #e0f2fe; color: #030a0e; }
+.btn-delete {
+  background-color: #fee2e2;
+  color: #ef4444;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s;
+}
+.btn-delete:hover {
+  background-color: #ef4444;
+  color: white;
 }
 </style>

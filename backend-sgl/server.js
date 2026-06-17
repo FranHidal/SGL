@@ -179,13 +179,62 @@ apiRouter.post('/tiendas', (req, res) => {
 
 apiRouter.get('/tiendas', (req, res) => {
     const query = `
-        SELECT t.*, c.nombre_cadena 
+        SELECT 
+            t.id_tienda, 
+            t.nombre_tienda, 
+            t.direccion, 
+            t.longitud, 
+            t.latitud,
+            c.id_cadena,
+            c.nombre_cadena,
+            t.id_contacto,
+            co.nombre AS contacto_nombre,
+            co.primer_apellido AS contacto_apellido,
+            co.telefono,
+            co.correo_electronico
         FROM Tienda t
         INNER JOIN Cadena c ON t.id_cadena = c.id_cadena
+        INNER JOIN Contacto co ON t.id_contacto = co.id_contacto
+        ORDER BY t.id_tienda DESC
     `;
     db.query(query, (err, result) => {
-        if (err) return res.status(500).send(err);
+        if (err) {
+            console.error("Error al consultar directorio de tiendas:", err);
+            return res.status(500).send(err);
+        }
         res.send(result);
+    });
+});
+
+apiRouter.delete('/tiendas/:id_tienda/:id_contacto', (req, res) => {
+    const { id_tienda, id_contacto } = req.params;
+
+    db.beginTransaction((err) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        // Paso A: Borramos primero la tienda por integridad referencial
+        db.query('DELETE FROM Tienda WHERE id_tienda = ?', [id_tienda], (errT) => {
+            if (errT) {
+                return db.rollback(() => {
+                    // Si da error de llave foránea es porque está vinculada a un Ruta_Detalle activa
+                    if (errT.code === 'ER_ROW_IS_REFERENCED_2') {
+                        return res.status(400).json({ error: "No se puede eliminar la sucursal porque pertenece al itinerario histórico de una ruta." });
+                    }
+                    return res.status(500).json({ error: errT.message });
+                });
+            }
+
+            // Paso B: Borramos el contacto asociado para no dejar registros basura
+            db.query('DELETE FROM Contacto WHERE id_contacto = ?', [id_contacto], (errC) => {
+                if (errC) return db.rollback(() => res.status(500).json({ error: errC.message }));
+
+                db.commit((errCommit) => {
+                    if (errCommit) return db.rollback(() => res.status(500).json({ error: errCommit.message }));
+                    
+                    res.send({ message: "✅ Sucursal e información de contacto eliminadas del sistema." });
+                });
+            });
+        });
     });
 });
 
