@@ -41,6 +41,8 @@ export default {
             router.push('/home');
           } else if (rol === 'director') {
             router.push('/director');
+          } else if (rol === 'desarrollo') {
+            router.push('/desarrollo');
           } else {
             alert('Rol no reconocido (' + user.rol + '). Contacta a soporte.');
           }

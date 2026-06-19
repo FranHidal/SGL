@@ -58,6 +58,18 @@ const router = createRouter({
       name: 'flota',
       component: () => import('../views/Director/Flota.vue'),
       meta: { requiresAuth: true, role: 'director' }
+    },
+    {
+      path: '/desarrollo',
+      name: 'desarrollo',
+      component: () => import('../views/Desarrollo/Home.vue'),
+      meta: { requiresAuth: true, role: 'desarrollo' }
+    },
+    {
+      path: '/bitacoradesarrollo',
+      name: 'bitacoradesarrollo',
+      component: () => import('../views/Desarrollo/Bitacora.vue'),
+      meta: { requiresAuth: true, role: 'desarrollo' }
     }
   ]
 })

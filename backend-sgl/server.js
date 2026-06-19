@@ -138,7 +138,7 @@ apiRouter.get('/colaboradores-sin-acceso', (req, res) => {
 apiRouter.post('/usuarios/crear', (req, res) => {
     const { id_colaborador, usuario, contrasena, rol } = req.body;
 
-    const rolesPermitidos = ['admin', 'operador', 'director'];
+    const rolesPermitidos = ['admin', 'operador', 'director', 'almacen', 'adminvo', 'desarrollo'];
     const rolSeguro = rolesPermitidos.includes(rol) ? rol : 'operador';
 
     const query = `
@@ -385,7 +385,6 @@ apiRouter.get('/operador/paradas-completadas/:id_colaborador', (req, res) => {
 });
 
 // --- BITÁCORA ---
-// --- BITÁCORA ---
 apiRouter.post('/bitacora', (req, res) => {
     const { 
         id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, 
@@ -494,6 +493,99 @@ apiRouter.get('/admin/ubicacion-operadores', (req, res) => {
     db.query(query, (err, result) => {
         if (err) return res.status(500).send(err);
         res.send(result);
+    });
+});
+
+// --- Desarrollo ---
+// Obtener todas las tiendas de forma simple para el selector
+apiRouter.get('/desarrollador/tiendas', (req, res) => {
+    const query = `
+        SELECT t.id_tienda, t.nombre_tienda, t.id_cadena, c.nombre_cadena 
+        FROM Tienda t
+        INNER JOIN Cadena c ON t.id_cadena = c.id_cadena
+        ORDER BY t.nombre_tienda ASC
+    `;
+    db.query(query, (err, result) => {
+        if (err) return res.status(500).send(err);
+        res.send(result);
+    });
+});
+
+// Obtener todos los operadores activos para el selector
+apiRouter.get('/desarrollador/operadores', (req, res) => {
+    const query = `
+        SELECT o.id_operador, c.nombre, c.primer_apellido 
+        FROM Operador o
+        JOIN Colaborador c ON o.id_colaborador = c.id_colaborador
+        ORDER BY c.nombre ASC
+    `;
+    db.query(query, (err, result) => {
+        if (err) return res.status(500).send(err);
+        res.send(result);
+    });
+});
+
+// --- GUARDAR BITÁCORA HISTÓRICA ---
+apiRouter.post('/desarrollador/bitacora-historica', (req, res) => {
+    const { 
+        hora_llegada, hora_salida, id_tienda, id_cadena, 
+        folio, fecha, comentarios, id_operador, 
+        perecedero, no_perecedero, bazar 
+    } = req.body;
+
+    // Validación estricta de datos mínimos para el histórico
+    if (!fecha || !id_operador || !id_tienda) {
+        return res.status(400).json({ error: "Faltan campos obligatorios (Fecha, Operador o Tienda)" });
+    }
+
+    const registros = [];
+
+    // Mapeo de filas según las columnas de tu BD:
+    // [id_ruta (NULL), hora_llegada, hora_salida, id_tienda, id_cadena, folio, perecedero, no_perecedero, bazar, peso, fecha, comentarios, id_operador]
+
+    if (parseFloat(perecedero) > 0) {
+        registros.push([
+            null, hora_llegada, hora_salida, id_tienda, id_cadena, folio, 
+            parseFloat(perecedero), 0, 0, 
+            parseFloat(perecedero), 
+            fecha, comentarios, id_operador
+        ]);
+    }
+    if (parseFloat(no_perecedero) > 0) {
+        registros.push([
+            null, hora_llegada, hora_salida, id_tienda, id_cadena, folio, 
+            0, parseFloat(no_perecedero), 0, 
+            parseFloat(no_perecedero), 
+            fecha, comentarios, id_operador
+        ]);
+    }
+    if (parseFloat(bazar) > 0) {
+        registros.push([
+            null, hora_llegada, hora_salida, id_tienda, id_cadena, folio, 
+            0, 0, parseFloat(bazar), 
+            parseFloat(bazar), 
+            fecha, comentarios, id_operador
+        ]);
+    }
+
+    if (registros.length === 0) {
+        return res.status(400).json({ error: "Debe ingresar al menos un peso mayor a 0 kg" });
+    }
+
+    const query = `
+        INSERT INTO Bitacora 
+        (id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, perecedero, no_perecedero, bazar, peso, fecha, comentarios, id_operador) 
+        VALUES ?
+    `;
+
+    db.query(query, [registros], (err, result) => {
+        if (err) {
+            console.error("❌ Error al insertar bitácora histórica:", err);
+            return res.status(500).json({ error: "Error interno en la base de datos: " + err.message });
+        }
+        res.status(201).json({ 
+            message: `✅ Éxito: Se crearon ${result.affectedRows} registros históricos correctamente.` 
+        });
     });
 });
 
