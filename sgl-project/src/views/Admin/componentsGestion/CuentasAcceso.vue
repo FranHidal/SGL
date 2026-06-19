@@ -20,6 +20,7 @@
             <option value="director">Director</option>
             <option value="almacen">Almacen</option>
             <option value="adminvo">Administrativo</option>
+            <option value="desarrollo">Desarrollo</option>
           </select>
         </div>
       </div>
