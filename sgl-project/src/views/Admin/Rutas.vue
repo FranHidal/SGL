@@ -1,26 +1,33 @@
 <template>
   <div class="gestion-container">
-    <aside class="admin-menu">
+    <button class="menu-toggle" @click="menuAbierto = !menuAbierto" aria-label="Toggle Menu">
+      <span v-if="!menuAbierto">☰ Menu</span>
+      <span v-else>✕ Cerrar</span>
+    </button>
+
+    <div v-if="menuAbierto" class="menu-overlay" @click="menuAbierto = false"></div>
+
+    <aside :class="['admin-menu', { 'is-open': menuAbierto }]">
       <h2>Logística VSP 🚀</h2>
       <nav>
         <button 
           class="nav-item" 
           :class="{ active: tabActual === 'planificador' }"
-          @click="tabActual = 'planificador'"
+          @click="cambiarTab('planificador')"
         >
           Planificador de Rutas
         </button>
         <button 
           class="nav-item" 
           :class="{ active: tabActual === 'historial' }"
-          @click="tabActual = 'historial'"
+          @click="cambiarTab('historial')"
         >
           Rutas Creadas
         </button>
         <button 
           class="nav-item" 
           :class="{ active: tabActual === 'mapa' }"
-          @click="tabActual = 'mapa'"
+          @click="cambiarTab('mapa')"
         >
           Mapa de Operadores
         </button>
@@ -45,21 +52,26 @@
 <script setup>
 import { ref } from 'vue';
 
-// Importación relativa basándonos en tu arquitectura de carpetas
 import PlanificadorRutas from './componentsRutas/PlanificacionRutas.vue';
 import HistorialRutas from './componentsRutas/HistorialRutas.vue';
 import MapaOperadores from './componentsRutas/MapaOperadores.vue';
 
 const tabActual = ref('planificador');
+// NUEVO: Estado para controlar el menú en pantallas pequeñas
+const menuAbierto = ref(false);
 
-// Diccionario de componentes dinámicos
 const componentes = {
   planificador: PlanificadorRutas,
   historial: HistorialRutas,
   mapa: MapaOperadores
 };
 
-// Función que se activa cuando el planificador emite que guardó una ruta
+// NUEVO: Cambia de pestaña y colapsa el menú si está en móvil
+const cambiarTab = (tab) => {
+  tabActual.value = tab;
+  menuAbierto.value = false;
+};
+
 const irAlHistorial = () => {
   tabActual.value = 'historial';
 };

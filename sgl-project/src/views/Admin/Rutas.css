@@ -8,7 +8,7 @@
     font-family: 'Inter', system-ui, sans-serif;
 }
 
-/* Sidebar Fijo */
+/* Sidebar Fijo con transiciones añadidas */
 .admin-menu {
     width: 280px;
     background-color: #1e293b;
@@ -21,6 +21,7 @@
     bottom: 0;
     left: 0;
     z-index: 1000;
+    transition: transform 0.3s ease;
 }
 
 .admin-menu h2 {
@@ -30,12 +31,13 @@
     text-align: center;
 }
 
-/* Contenido Principal con margen para no quedar bajo el sidebar */
+/* Contenido Principal responsivo */
 .gestion-content {
     flex-grow: 1;
     margin-left: 280px;
     padding: 40px;
     width: calc(100% - 280px);
+    box-sizing: border-box; /* Asegura que los paddings no ensanchen de más el contenedor */
 }
 
 /* BOTONES DEL MENÚ (SIDEBAR) */
@@ -68,4 +70,62 @@
     margin-top: auto;
     padding-top: 20px;
     border-top: 1px solid #334155;
+}
+
+/* ==========================================
+   NUEVOS ESTILOS PARA ADAPTACIÓN MÓVIL
+   ========================================== */
+
+/* Botón flotante para activar el menú */
+.menu-toggle {
+    display: none; /* Oculto por defecto en escritorio */
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    z-index: 1100;
+    background-color: #1e293b;
+    color: white;
+    border: 1px solid #334155;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Fondo oscuro detrás del menú en móvil */
+.menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 999;
+    backdrop-filter: blur(2px);
+}
+
+/* Media Query para pantallas menores a 768px */
+@media (max-width: 768px) {
+    .menu-toggle {
+        display: block; /* Habilitamos la hamburguesa */
+    }
+
+    .admin-menu {
+        left: 0;
+        transform: translateX(-100%); /* Escondemos el menú a la izquierda */
+        box-shadow: 5px 0 25px rgba(0, 0, 0, 0.25);
+    }
+
+    /* Clase reactiva que inyecta Vue para desplegar el menú */
+    .admin-menu.is-open {
+        transform: translateX(0);
+    }
+
+    /* Forzamos al contenido a usar todo el ancho disponible */
+    .gestion-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 80px 20px 20px 20px; /* Separación superior para que el contenido baje del botón toggle */
+    }
 }
