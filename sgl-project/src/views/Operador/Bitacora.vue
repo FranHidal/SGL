@@ -121,10 +121,10 @@ const totalCalculado = computed(() => {
 
 const cargarDatos = async () => {
   try {
-    const resComp = await axios.get(`http://localhost:3000/api/operador/paradas-completadas/${user.id_colaborador}`);
+    const resComp = await axios.get(`/operador/paradas-completadas/${user.id_colaborador}`);
     paradasCompletasIds.value = resComp.data;
 
-    const resRuta = await axios.get(`http://localhost:3000/api/operador/mi-ruta/${user.id_colaborador}`);
+    const resRuta = await axios.get(`/operador/mi-ruta/${user.id_colaborador}`);
     if (resRuta.data.length > 0) {
       todasLasParadas.value = resRuta.data;
       form.id_ruta = resRuta.data[0].id_ruta;
@@ -166,7 +166,7 @@ const enviarRegistro = async () => {
 
   guardando.value = true;
   try {
-    await axios.post('http://localhost:3000/api/bitacora', form);
+    await axios.post('/bitacora', form);
     paradasCompletasIds.value.push(form.id_tienda);
     alert('✅ Parada registrada con éxito');
     router.push('/mapa'); 

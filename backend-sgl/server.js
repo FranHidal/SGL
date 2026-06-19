@@ -385,6 +385,7 @@ apiRouter.get('/operador/paradas-completadas/:id_colaborador', (req, res) => {
 });
 
 // --- BITÁCORA ---
+// --- BITÁCORA ---
 apiRouter.post('/bitacora', (req, res) => {
     const { 
         id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, 
@@ -394,21 +395,42 @@ apiRouter.post('/bitacora', (req, res) => {
 
     const registros = [];
 
+    // Mapeo exacto según el orden de columnas del INSERT:
+    // [id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, perecedero, no_perecedero, bazar, peso, fecha, comentarios, id_operador]
+
     if (parseFloat(perecedero) > 0) {
-        registros.push([id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, parseFloat(perecedero), fecha, comentarios, id_operador, 'Perecedero']);
+        registros.push([
+            id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, 
+            parseFloat(perecedero), 0, 0, // Solo perecedero tiene valor, los demás 0
+            parseFloat(perecedero),       // 'peso' total de esta fila
+            fecha, comentarios, id_operador
+        ]);
     }
     if (parseFloat(no_perecedero) > 0) {
-        registros.push([id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, parseFloat(no_perecedero), fecha, comentarios, id_operador, 'No Perecedero']);
+        registros.push([
+            id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, 
+            0, parseFloat(no_perecedero), 0, // Solo no_perecedero tiene valor
+            parseFloat(no_perecedero),       // 'peso' total de esta fila
+            fecha, comentarios, id_operador
+        ]);
     }
     if (parseFloat(bazar) > 0) {
-        registros.push([id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, parseFloat(bazar), fecha, comentarios, id_operador, 'Bazar']);
+        registros.push([
+            id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, 
+            0, 0, parseFloat(bazar),       // Solo bazar tiene valor
+            parseFloat(bazar),             // 'peso' total de esta fila
+            fecha, comentarios, id_operador
+        ]);
     }
 
-    if (registros.length === 0) return res.status(400).json({ error: "Ingrese al menos un peso" });
+    if (registros.length === 0) {
+        return res.status(400).json({ error: "Ingrese al menos un peso" });
+    }
 
+    // El query debe listar explícitamente las columnas en el orden exacto del arreglo
     const query = `
         INSERT INTO Bitacora 
-        (id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, peso, fecha, comentarios, id_operador, categoria) 
+        (id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, perecedero, no_perecedero, bazar, peso, fecha, comentarios, id_operador) 
         VALUES ?
     `;
 
