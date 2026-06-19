@@ -1,24 +1,31 @@
 <template>
   <div class="gestion-container">
-    <aside class="admin-menu">
+    <button class="menu-toggle" @click="menuAbierto = !menuAbierto" aria-label="Toggle Menu">
+      <span v-if="!menuAbierto">☰ Menu</span>
+      <span v-else>✕ Cerrar</span>
+    </button>
+
+    <div v-if="menuAbierto" class="menu-overlay" @click="menuAbierto = false"></div>
+
+    <aside :class="['admin-menu', { 'is-open': menuAbierto }]">
       <h2>Panel de Gestión</h2>
       <nav>
-        <button @click="vistaActual = 'crear'" :class="['nav-item', { active: vistaActual === 'crear' }]">
+        <button @click="seleccionarVista('crear')" :class="['nav-item', { active: vistaActual === 'crear' }]">
           Nuevo Colaborador 👤
         </button>
-        <button @click="vistaActual = 'vehiculos'" :class="['nav-item', { active: vistaActual === 'vehiculos' }]">
+        <button @click="seleccionarVista('vehiculos')" :class="['nav-item', { active: vistaActual === 'vehiculos' }]">
           Gestionar Vehículos 🚛
         </button>
-        <button @click="vistaActual = 'asignaciones'" :class="['nav-item', { active: vistaActual === 'asignaciones' }]">
+        <button @click="seleccionarVista('asignaciones')" :class="['nav-item', { active: vistaActual === 'asignaciones' }]">
           Asignar Unidades 🔑
         </button>
-        <button @click="vistaActual = 'lista'" :class="['nav-item', { active: vistaActual === 'lista' }]">
+        <button @click="seleccionarVista('lista')" :class="['nav-item', { active: vistaActual === 'lista' }]">
           Lista de Personal 📋
         </button>
-        <button @click="vistaActual = 'tiendas'" :class="['nav-item', { active: vistaActual === 'tiendas' }]">
+        <button @click="seleccionarVista('tiendas')" :class="['nav-item', { active: vistaActual === 'tiendas' }]">
           Gestionar Tiendas 🏬
         </button>
-        <button @click="vistaActual = 'accesos'" :class="['nav-item', { active: vistaActual === 'accesos' }]">
+        <button @click="seleccionarVista('accesos')" :class="['nav-item', { active: vistaActual === 'accesos' }]">
           Cuentas de Acceso 🔑
         </button>
         <div class="menu-footer">
@@ -40,7 +47,6 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-// 1. Importamos los subcomponentes que acabamos de crear
 import RegistroPersonal from './componentsGestion/RegistroPersonal.vue';
 import FlotaVehiculos from './componentsGestion/GestionVehiculos.vue';
 import AsignarUnidades from './componentsGestion/AsignacionUnidades.vue';
@@ -50,10 +56,10 @@ import CuentasAcceso from './componentsGestion/CuentasAcceso.vue';
 
 const router = useRouter();
 
-// 2. Controlamos qué vista está activa (Por defecto inicia en 'crear')
 const vistaActual = ref('crear');
+// NUEVO: Estado para alternar el menú en móviles
+const menuAbierto = ref(false);
 
-// 3. Mapeamos las cadenas de texto con los objetos de componentes importados
 const componentes = {
   crear: RegistroPersonal,
   vehiculos: FlotaVehiculos,
@@ -61,6 +67,12 @@ const componentes = {
   lista: ListaPersonal,
   tiendas: DirectorioTiendas,
   accesos: CuentasAcceso
+};
+
+// NUEVO: Cambia la vista y cierra el menú automáticamente en móvil
+const seleccionarVista = (vista) => {
+  vistaActual.value = vista;
+  menuAbierto.value = false;
 };
 
 const logout = () => { 
