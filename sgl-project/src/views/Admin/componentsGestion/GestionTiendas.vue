@@ -44,7 +44,8 @@
             <th>ID</th>
             <th>Tienda</th>
             <th>Cadena</th>
-            <th>Dirección</th>
+            <th>Longitud</th>
+            <th>Latitud</th>
             <th>Contacto</th>
             <th>Teléfono / Correo</th>
             <th>Acción</th>
@@ -55,7 +56,8 @@
             <td>#{{ t.id_tienda }}</td>
             <td><strong>{{ t.nombre_tienda }}</strong></td>
             <td><span class="badge info">{{ t.nombre_cadena }}</span></td>
-            <td>{{ t.direccion }}</td>
+            <td>{{ t.longitud }}</td>
+            <td>{{ t.latitud }}</td>
             <td>{{ t.contacto_nombre }} {{ t.contacto_apellido }}</td>
             <td>
               {{ t.telefono }} <br>
