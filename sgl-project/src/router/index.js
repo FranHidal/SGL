@@ -11,12 +11,6 @@ const router = createRouter({
       component: () => import('../views/Operador/Home.vue'),
       meta: { requiresAuth: true, role: 'operador' } 
     },
-    { 
-      path: '/admin', 
-      name: 'admin', 
-      component: () => import('../views/Admin/Home.vue'),
-      meta: { requiresAuth: true, role: 'admin' } 
-    },
     {
       path: '/bitacora',
       name: 'bitacora',
@@ -29,6 +23,12 @@ const router = createRouter({
       component: () => import('../views/Operador/Mapa.vue'),
       meta: { requiresAuth: true, role: 'operador' }
     },
+    { 
+      path: '/admin', 
+      name: 'admin', 
+      component: () => import('../views/Admin/Home.vue'),
+      meta: { requiresAuth: true, role: 'admin' } 
+    },
     {
       path: '/gestion',
       name: 'gestion',
@@ -40,6 +40,12 @@ const router = createRouter({
       name: 'rutas',
       component: () => import('../views/Admin/Rutas.vue'),
       meta: { requiresAuth: true, role: 'admin' }
+    },
+    {
+      path: '/tablabitacoras',
+      name: 'tablabitacoras',
+      component: () => import('../views/Global/TablaBitacoras.vue'),
+      meta: { requiresAuth: true}
     },
     {
       path: '/director',

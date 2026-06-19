@@ -589,6 +589,48 @@ apiRouter.post('/desarrollador/bitacora-historica', (req, res) => {
     });
 });
 
+// --- OBTENER TABLA DE BITÁCORAS AGRUPADA (REPORTE) ---
+apiRouter.get('/global/reporte-bitacoras', (req, res) => {
+    const query = `
+        SELECT 
+            b.folio,
+            b.fecha,
+            b.hora_llegada,
+            b.hora_salida,
+            t.nombre_tienda,
+            c.nombre_cadena,
+            CONCAT(col.nombre, ' ', col.primer_apellido) AS nombre_operador,
+            SUM(b.perecedero) AS total_perecedero,
+            SUM(b.no_perecedero) AS total_no_perecedero,
+            SUM(b.bazar) AS total_bazar,
+            SUM(b.peso) AS peso_total_visita,
+            GROUP_CONCAT(DISTINCT b.comentarios SEPARATOR ' | ') AS comentarios_combinados
+        FROM Bitacora b
+        LEFT JOIN Tienda t ON b.id_tienda = t.id_tienda
+        LEFT JOIN Cadena c ON b.id_cadena = c.id_cadena
+        LEFT JOIN Operador o ON b.id_operador = o.id_operador
+        LEFT JOIN Colaborador col ON o.id_colaborador = col.id_colaborador
+        GROUP BY 
+            b.folio, 
+            b.fecha,
+            b.hora_llegada,
+            b.hora_salida,
+            t.nombre_tienda,
+            c.nombre_cadena,
+            col.nombre,
+            col.primer_apellido
+        ORDER BY b.fecha DESC, b.hora_llegada DESC
+    `;
+
+    db.query(query, (err, result) => {
+        if (err) {
+            console.error("❌ Error al obtener reporte de bitácoras:", err);
+            return res.status(500).json({ error: err.message });
+        }
+        res.send(result);
+    });
+});
+
 // 🌟 INYECCIÓN GLOBAL DEL PREFIJO PARA EL ENTORNO DE PRODUCCIÓN/LOCAL
 app.use('/api', apiRouter);
 
