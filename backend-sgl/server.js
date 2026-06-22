@@ -287,7 +287,9 @@ apiRouter.post('/rutas/generar', (req, res) => {
                     
                     console.log(`Ejecutando optimizador para Ruta #${nuevoIdRuta} en: ${scriptPython}`);
 
-                    exec(`python3 "${scriptPython}"`, (pyErr, stdout, stderr) => {
+                    const comando = `PYTHONPATH=/home/fhidalgo/.local/lib/python3.12/site-packages python3 "${scriptPython}"`;
+
+                    exec(comando, (pyErr, stdout, stderr) => {
                         if (pyErr) {
                             console.error("❌ ERROR CRÍTICO AL EJECUTAR PYTHON DESDE NODE:");
                             console.error(stderr);
