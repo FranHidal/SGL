@@ -260,6 +260,8 @@ apiRouter.post('/cadenas', (req, res) => {
 });
 
 // --- CREACIÓN Y OPTIMIZACIÓN DE RUTAS ---
+const path = require('path');
+
 apiRouter.post('/rutas/generar', (req, res) => {
     const { id_operador, tiendas } = req.body; 
     const fecha = new Date().toISOString().split('T')[0];
@@ -281,9 +283,13 @@ apiRouter.post('/rutas/generar', (req, res) => {
                 db.commit((errC) => {
                     if (errC) return db.rollback(() => res.status(500).json({ error: errC.message }));
 
-                    exec(`python ../AI-worker/VSP.py`, (pyErr, stdout, stderr) => {
+                    const scriptPython = path.join(__dirname, '../AI-worker/VSP.py');
+                    
+                    console.log(`Ejecutando optimizador para Ruta #${nuevoIdRuta} en: ${scriptPython}`);
+
+                    exec(`python3 "${scriptPython}"`, (pyErr, stdout, stderr) => {
                         if (pyErr) {
-                            console.error("❌ ERROR CRÍTICO EN PYTHON:");
+                            console.error("❌ ERROR CRÍTICO AL EJECUTAR PYTHON DESDE NODE:");
                             console.error(stderr);
                         }
                         if (stdout) {
