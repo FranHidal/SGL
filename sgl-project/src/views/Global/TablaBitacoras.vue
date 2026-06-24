@@ -1,10 +1,40 @@
 <template>
   <div class="reporte-container">
     <header class="reporte-header">
-      <h2>Historial General de Bitácoras 📊</h2>
-      <p>Visualización unificada de recolecciones por folio de ticket</p>
-      <button @click="$router.push('/admin')" class="nav-item">Volver al Panel</button>
+      <div class="header-main">
+        <h2>Historial General de Bitácoras</h2>
+        <p>Visualización unificada de recolecciones por folio de ticket</p>
+      </div>
+      <button @click="$router.push('/admin')" class="btn-panel">Volver al Panel</button>
     </header>
+
+    <div class="filtros-bar">
+      <div class="filtro-group buscador">
+        <label>Buscar registro</label>
+        <input 
+          type="text" 
+          v-model="busqueda" 
+          placeholder="Buscar por folio, tienda u operador..." 
+          class="input-filtro"
+        />
+      </div>
+      
+      <div class="filtro-group">
+        <label>Fecha Inicio</label>
+        <input type="date" v-model="fechaInicio" class="input-filtro" />
+      </div>
+
+      <div class="filtro-group">
+        <label>Fecha Fin</label>
+        <input type="date" v-model="fechaFin" class="input-filtro" />
+      </div>
+
+      <div class="filtro-group btn-limpiar-container">
+        <button @click="limpiarFiltros" class="btn-limpiar" title="Restablecer filtros">
+          Limpiar Filtros
+        </button>
+      </div>
+    </div>
 
     <div class="tabla-responsiva">
       <table class="tabla-bitacoras">
@@ -26,10 +56,12 @@
           <tr v-if="cargando">
             <td colspan="10" class="text-center text-muted">Cargando registros...</td>
           </tr>
-          <tr v-else-if="bitacoras.length === 0">
-            <td colspan="10" class="text-center text-muted">No se encontraron registros de bitácoras.</td>
+          <tr v-else-if="bitacorasFiltradas.length === 0">
+            <td colspan="10" class="text-center text-muted">
+              No se encontraron registros que coincidan con los filtros aplicados.
+            </td>
           </tr>
-          <tr v-for="b in bitacoras" :key="b.folio + b.fecha">
+          <tr v-for="b in bitacorasFiltradas" :key="b.folio + b.fecha">
             <td><strong>{{ formatearFecha(b.fecha) }}</strong></td>
             <td><span class="badge-folio">{{ b.folio }}</span></td>
             <td>
@@ -60,11 +92,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 
 const bitacoras = ref([]);
 const cargando = ref(true);
+
+// Estados reactivos para los filtros
+const busqueda = ref('');
+const fechaInicio = ref('');
+const fechaFin = ref('');
 
 const obtenerReporte = async () => {
   try {
@@ -76,6 +113,34 @@ const obtenerReporte = async () => {
   } finally {
     cargando.value = false;
   }
+ };
+
+// PROPIEDAD COMPUTADA: Filtra el arreglo dinámicamente en memoria
+const bitacorasFiltradas = computed(() => {
+  return bitacoras.value.filter(b => {
+    // 1. Filtro por Buscador de texto (Folio, Tienda, Cadena u Operador)
+    const texto = busqueda.value.toLowerCase().trim();
+    const coincideTexto = !texto || 
+      b.folio?.toLowerCase().includes(texto) ||
+      b.nombre_tienda?.toLowerCase().includes(texto) ||
+      b.nombre_cadena?.toLowerCase().includes(texto) ||
+      b.nombre_operador?.toLowerCase().includes(texto);
+
+    // 2. Filtro por rango de fechas (Asegurando formatear la fecha correctamente)
+    // El string de b.fecha suele venir como "2026-06-23T00:00:00.000Z", extraemos solo el "YYYY-MM-DD"
+    const fechaRegistro = b.fecha ? b.fecha.split('T')[0] : '';
+    
+    const coincideFechaInicio = !fechaInicio.value || fechaRegistro >= fechaInicio.value;
+    const coincideFechaFin = !fechaFin.value || fechaRegistro <= fechaFin.value;
+
+    return coincideTexto && coincideFechaInicio && coincideFechaFin;
+  });
+});
+
+const limpiarFiltros = () => {
+  busqueda.value = '';
+  fechaInicio.value = '';
+  fechaFin.value = '';
 };
 
 const formatearFecha = (fechaStr) => {
