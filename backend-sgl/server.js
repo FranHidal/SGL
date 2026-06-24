@@ -395,9 +395,9 @@ apiRouter.get('/operador/paradas-completadas/:id_colaborador', (req, res) => {
 // --- BITÁCORA ---
 apiRouter.post('/bitacora', (req, res) => {
     const { 
-        id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, 
-        folio, fecha, comentarios, id_operador, 
-        perecedero, no_perecedero, bazar 
+        id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena,
+        folio, temperatura, fecha, comentarios, id_operador,
+        perecedero, no_perecedero, bazar
     } = req.body;
 
     const registros = [];
@@ -410,7 +410,7 @@ apiRouter.post('/bitacora', (req, res) => {
             id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, 
             parseFloat(perecedero), 0, 0, // Solo perecedero tiene valor, los demás 0
             parseFloat(perecedero),       // 'peso' total de esta fila
-            fecha, comentarios, id_operador
+            fecha, comentarios, id_operador, temperatura
         ]);
     }
     if (parseFloat(no_perecedero) > 0) {
@@ -418,7 +418,7 @@ apiRouter.post('/bitacora', (req, res) => {
             id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, 
             0, parseFloat(no_perecedero), 0, // Solo no_perecedero tiene valor
             parseFloat(no_perecedero),       // 'peso' total de esta fila
-            fecha, comentarios, id_operador
+            fecha, comentarios, id_operador, temperatura
         ]);
     }
     if (parseFloat(bazar) > 0) {
@@ -426,7 +426,7 @@ apiRouter.post('/bitacora', (req, res) => {
             id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, 
             0, 0, parseFloat(bazar),       // Solo bazar tiene valor
             parseFloat(bazar),             // 'peso' total de esta fila
-            fecha, comentarios, id_operador
+            fecha, comentarios, id_operador, temperatura
         ]);
     }
 
@@ -437,7 +437,7 @@ apiRouter.post('/bitacora', (req, res) => {
     // El query debe listar explícitamente las columnas en el orden exacto del arreglo
     const query = `
         INSERT INTO Bitacora 
-        (id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, perecedero, no_perecedero, bazar, peso, fecha, comentarios, id_operador) 
+        (id_ruta, hora_llegada, hora_salida, id_tienda, id_cadena, folio, perecedero, no_perecedero, bazar, peso, fecha, comentarios, id_operador, temperatura) 
         VALUES ?
     `;
 

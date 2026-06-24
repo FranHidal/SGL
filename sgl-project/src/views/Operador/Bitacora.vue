@@ -47,6 +47,10 @@
           <input type="text" v-model="form.folio" placeholder="ABC-123" required />
         </div>
         <div class="form-group">
+          <label>Temperatura</label>
+          <input type="number" v-model="form.temperatura" required />
+        </div>
+        <div class="form-group">
           <label>Hora Llegada</label>
           <input type="time" v-model="form.hora_llegada" required />
         </div>
@@ -91,10 +95,11 @@ const user = JSON.parse(localStorage.getItem('user'));
 const form = reactive({
   id_ruta: null,
   hora_llegada: '',
-  hora_salida: '', // Agregado
+  hora_salida: '',
   id_tienda: null,
   id_cadena: null,
   folio: '',
+  temperatura: null,
   perecedero: 0,
   no_perecedero: 0,
   bazar: 0,
