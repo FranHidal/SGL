@@ -5,7 +5,7 @@
         <h2>Historial General de Bitácoras</h2>
         <p>Visualización unificada de recolecciones por folio de ticket</p>
       </div>
-      <button @click="$router.push('/admin')" class="btn-panel">Volver al Panel</button>
+      <button @click="$router.back()" class="btn-panel">Volver al Panel</button>
     </header>
 
     <div class="filtros-bar">

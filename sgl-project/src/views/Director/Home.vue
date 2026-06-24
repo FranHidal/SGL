@@ -18,6 +18,12 @@
         <p>Consulta el estado de las unidades y mantenimientos pendientes.</p>
       </button>
 
+      <button class="menu-card" @click="goTo('tablabitacoras')">
+        <div class="card-icon">📝</div>
+        <h2>Tabla de las Bitácoras</h2>
+        <p>Visualización de las bítacoras de recolección</p>
+      </button>
+
     </div>
 
     <footer class="menu-footer">
