@@ -559,6 +559,135 @@ apiRouter.get('/admin/ubicacion-operadores', (req, res) => {
     });
 });
 
+// --- ENDPOINT UNIFICADO PARA EL DASHBOARD DEL DIRECTOR ---
+apiRouter.get('/dashboard-stats', async (req, res) => {
+    try {
+        // Query 1: KPIs Principales (Conteo dinámico basado en las tablas de hoy)
+        const queryKpis = `
+            SELECT 
+                (SELECT COALESCE(SUM(peso), 0) FROM Bitacora WHERE fecha = CURDATE()) AS peso_hoy,
+                (SELECT COUNT(DISTINCT id_tienda) FROM Tienda) AS tiendas_totales,
+                (SELECT COUNT(DISTINCT id_tienda) FROM Bitacora WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)) AS tiendas_activas_mes,
+                (SELECT COUNT(*) FROM Vehiculo) AS vehiculos_totales,
+                (SELECT COUNT(DISTINCT id_operador) FROM Operador) AS operadores_totales,
+                (SELECT COUNT(DISTINCT id_operador) FROM Ruta WHERE fecha_creacion = CURDATE()) AS operadores_ruta_hoy
+        `;
+
+        // Query 2: Monitoreo de Rutas de Hoy con progreso real de paradas completadas vs planificadas
+        const queryRutas = `
+            SELECT 
+                r.id_ruta,
+                CONCAT(c.nombre, ' ', c.primer_apellido) AS operador,
+                CONCAT(v.marca, ' (', v.matricula, ')') AS vehiculo,
+                -- Conteo de paradas asignadas totales en el itinerario
+                (SELECT COUNT(*) FROM Ruta_Detalle rd WHERE rd.id_ruta = r.id_ruta) AS total_paradas,
+                -- Conteo de paradas únicas ya registradas en bitácora para esa ruta
+                (SELECT COUNT(DISTINCT b.id_tienda) FROM Bitacora b WHERE b.id_ruta = r.id_ruta) AS paradas_completadas
+            FROM Ruta r
+            INNER JOIN Operador o ON r.id_operador = o.id_operador
+            INNER JOIN Colaborador c ON o.id_colaborador = c.id_colaborador
+            LEFT JOIN Vehiculo v ON o.id_vehiculo = v.id_vehiculo
+            WHERE r.fecha_creacion = CURDATE()
+            ORDER BY r.id_ruta DESC
+        `;
+
+        // Query 3: Volumen de Carga real por Cadena acumulado históricamente
+        const queryCadenas = `
+            SELECT 
+                c.nombre_cadena AS nombre,
+                ROUND(COALESCE(SUM(b.peso), 0), 1) AS entregas
+            FROM Cadena c
+            LEFT JOIN Bitacora b ON c.id_cadena = b.id_cadena
+            GROUP BY c.id_cadena
+            ORDER BY entregas DESC
+            LIMIT 5
+        `;
+
+        // Ejecutar consultas en paralelo para máxima eficiencia
+        db.query(queryKpis, (errK, resK) => {
+            if (errK) return res.status(500).json({ error: errK.message });
+            
+            db.query(queryRutas, (errR, resR) => {
+                if (errR) return res.status(500).json({ error: errR.message });
+
+                db.query(queryCadenas, (errC, resC) => {
+                    if (errC) return res.status(500).json({ error: errC.message });
+
+                    // Procesar y moldear el progreso de las rutas antes de enviar
+                    const rutasProcesadas = resR.map(ruta => {
+                        const progreso = ruta.total_paradas > 0 
+                            ? Math.round((ruta.paradas_completadas / ruta.total_paradas) * 100) 
+                            : 0;
+                        
+                        let estado = 'En Ruta';
+                        if (progreso === 100) estado = 'Completada';
+                        else if (progreso === 0 && ruta.total_paradas > 0) estado = 'Pendiente';
+
+                        return {
+                            id: ruta.id_ruta,
+                            operador: ruta.operador,
+                            vehiculo: ruta.vehiculo || 'Sin Unidad',
+                            progreso: progreso,
+                            estado: estado
+                        };
+                    });
+
+                    // Calcular porcentajes visuales relativos para las barras de volumen por cadena
+                    const maxVolumen = resC.length > 0 ? Math.max(...resC.map(o => o.entregas)) : 1;
+                    const cadenasProcesadas = resC.map(cad => ({
+                        nombre: cad.nombre,
+                        entregas: cad.entregas,
+                        volumen: maxVolumen > 0 ? Math.round((cad.entregas / maxVolumen) * 100) : 0
+                    }));
+
+                    // Calcular métrica de eficiencia global del día (porcentaje de paradas completadas de todo el CEDIS)
+                    const totalCEDISParadas = resR.reduce((acc, curr) => acc + curr.total_paradas, 0);
+                    const totalCEDISCompletadas = resR.reduce((acc, curr) => acc + curr.paradas_completadas, 0);
+                    const eficienciaGlobal = totalCEDISParadas > 0 
+                        ? parseFloat(((totalCEDISCompletadas / totalCEDISParadas) * 100).toFixed(1)) 
+                        : 0;
+
+                    // Estructura de respuesta limpia mapeada al frontend
+                    res.json({
+                        kpis: {
+                            pesoHoy: resK[0].peso_hoy,
+                            eficiencia: eficienciaGlobal,
+                            tiendasActivas: resK[0].tiendas_totales,
+                            tiendasMes: resK[0].tiendas_activas_mes,
+                            vehiculosTotales: resK[0].vehiculos_totales,
+                            operadoresActivos: resK[0].operadores_totales,
+                            operadoresEnRuta: resK[0].operadores_ruta_hoy
+                        },
+                        rutas: rutasProcesadas,
+                        cadenas: cadenasProcesadas
+                    });
+                });
+            });
+        });
+
+    } catch (e) {
+        res.status(500).json({ error: "Error en el servidor central: " + e.message });
+    }
+});
+
+// --- OBTENER FLOTA COMPLETA CON ESTADO DE MANTENIMIENTO ---
+apiRouter.get('/flota-estado', (req, res) => {
+    // Ordenamos para que muestre primero los vehículos con fechas de mantenimiento más antiguas (los más urgentes)
+    const query = `
+        SELECT id_vehiculo, modelo, marca, matricula, fecha_mantenimiento
+        FROM Vehiculo 
+        ORDER BY fecha_mantenimiento ASC
+    `;
+    
+    db.query(query, (err, result) => {
+        if (err) {
+            console.error("❌ Error al consultar estado de la flota:", err);
+            return res.status(500).json({ error: err.message });
+        }
+        res.send(result);
+    });
+});
+
 // --- Desarrollo ---
 // Obtener todas las tiendas de forma simple para el selector
 apiRouter.get('/desarrollador/tiendas', (req, res) => {
