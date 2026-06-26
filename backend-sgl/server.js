@@ -352,6 +352,61 @@ apiRouter.delete('/rutas/:id', (req, res) => {
     });
 });
 
+// --- OBTENER TIENDAS CON SUS CONTACTOS ASOCIADOS ---
+apiRouter.get('/tiendas-contactos', (req, res) => {
+    const query = `
+        SELECT 
+            t.id_tienda, 
+            t.nombre_tienda, 
+            t.id_contacto,
+            CONCAT(co.nombre, ' ', co.primer_apellido) AS nombre_contacto,
+            co.telefono
+        FROM Tienda t
+        INNER JOIN Contacto co ON t.id_contacto = co.id_contacto
+        ORDER BY t.nombre_tienda ASC
+    `;
+    db.query(query, (err, result) => {
+        if (err) {
+            console.error("❌ Error al obtener catálogo para donaciones:", err);
+            return res.status(500).send(err);
+        }
+        res.send(result);
+    });
+});
+
+// --- CREAR NUEVA DONACIÓN FUTURA ---
+apiRouter.post('/donaciones-futuras', (req, res) => {
+    const { 
+        id_tienda, id_contacto, fecha_recoleccion, 
+        hora_recoleccion, tipo_donacion, cantidad, 
+        observaciones, responsable 
+    } = req.body;
+
+    // Validación básica en el servidor
+    if (!id_tienda || !fecha_recoleccion || !tipo_donacion || !cantidad) {
+        return res.status(400).json({ error: "Faltan campos mandatorios para programar la donación" });
+    }
+
+    const query = `
+        INSERT INTO Donaciones_Futuras 
+        (id_tienda, id_contacto, fecha_recoleccion, hora_recoleccion, tipo_donacion, cantidad, observaciones, responsable) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const valores = [id_tienda, id_contacto, fecha_recoleccion, hora_recoleccion, tipo_donacion, cantidad, observaciones, responsable];
+
+    db.query(query, valores, (err, result) => {
+        if (err) {
+            console.error("❌ Error al registrar donación futura:", err);
+            return res.status(500).json({ error: "Error en base de datos: " + err.message });
+        }
+        res.status(201).json({ 
+            message: "✅ Donación futura programada con éxito", 
+            id_donaciones: result.insertId 
+        });
+    });
+});
+
 // --- RUTAS PARA EL OPERADOR (MAPA) ---
 apiRouter.get('/operador/mi-ruta/:id_colaborador', (req, res) => {
     const query = `

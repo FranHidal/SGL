@@ -42,6 +42,12 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'admin' }
     },
     {
+      path: '/donaciones',
+      name: 'donaciones',
+      component: () => import('../views/Admin/Donaciones.vue'),
+      meta: { requiresAuth: true, role: 'admin' }
+    },
+    {
       path: '/tablabitacoras',
       name: 'tablabitacoras',
       component: () => import('../views/Global/TablaBitacoras.vue'),

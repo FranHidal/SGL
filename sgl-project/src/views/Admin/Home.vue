@@ -24,6 +24,12 @@
         <p>Visualización de las bítacoras de recolección</p>
       </button>
 
+      <button class="menu-card" @click="goTo('donaciones')">
+        <div class="card-icon">📅</div>
+        <h2>Donaciones futuras</h2>
+        <p>Agendar donaciones futuras</p>
+      </button>
+
     </div>
 
     <footer class="menu-footer">
