@@ -15,8 +15,19 @@
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-.form-header { text-align: center; margin-bottom: 30px; }
-.form-header h2 { color: #1e293b; margin: 5px 0; }
+.form-header { 
+  text-align: center; 
+  margin-bottom: 30px; 
+}
+.form-header h2 { 
+  color: #1e293b; 
+  margin: 5px 0; 
+}
+
+.success-text {
+  color: #10b981;
+  font-weight: 600;
+}
 
 .form-row {
   display: grid;
@@ -25,11 +36,12 @@
   margin-bottom: 15px;
 }
 
-.form-grid-3 {
+/* 🚀 NUEVA CUADRÍCULA DE DOS COLUMNAS PARA ALINEAR CANTIDAD Y MEDIDA */
+.kilos-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 15px;
-  margin-bottom: 15px;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px 20px;
+  margin-bottom: 20px;
 }
 
 .form-section-title {
@@ -54,6 +66,28 @@ input, select, textarea {
   border: 1px solid #cbd5e1;
   border-radius: 6px;
   font-size: 0.95rem;
+  background-color: #ffffff;
+  color: #1e293b;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.input-readonly {
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  cursor: not-allowed;
+}
+
+.input-total-auto {
+  background-color: #f1f5f9;
+  font-weight: bold;
+  color: #1e293b;
+  border-color: #cbd5e1;
 }
 
 .form-actions {
@@ -71,63 +105,40 @@ input, select, textarea {
   border-radius: 6px;
   font-weight: bold;
   cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.btn-submit:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
 }
 
 .btn-cancel {
   flex: 1;
   background: #f1f5f9;
+  color: #475569;
   border: none;
   border-radius: 6px;
-  cursor: pointer;
-}
-
-/* Estilos para las tarjetas de selección tipo Bool */
-.carga-selector-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.check-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 15px;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: white;
-}
-
-.check-card input {
-  display: none; /* Ocultamos el checkbox real */
-}
-
-.check-card .icon {
-  font-size: 1.5rem;
-  margin-bottom: 5px;
-}
-
-.check-card .text {
-  font-size: 0.8rem;
   font-weight: 600;
-  color: #64748b;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-/* Estado activo cuando el checkbox está marcado */
-.check-card.is-active {
-  border-color: #3b82f6;
-  background-color: #eff6ff;
+.btn-cancel:hover {
+  background: #e2e8f0;
 }
 
-.check-card.is-active .text {
-  color: #1e40af;
-}
-
-.input-readonly {
-  background-color: #f8fafc;
-  border: 1px solid #cbd5e1;
-  color: #475569;
+/* RESPONSIVIDAD ADAPTATIVA PARA MÓVILES */
+@media (max-width: 600px) {
+  .form-row, .kilos-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .bitacora-form {
+    padding: 20px;
+  }
 }

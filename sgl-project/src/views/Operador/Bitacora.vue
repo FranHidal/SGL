@@ -2,16 +2,16 @@
   <div class="bitacora-container">
     <form @submit.prevent="enviarRegistro" class="bitacora-form">
       <header class="form-header">
-        <h2>Registro de Entrega 🚚</h2>
+        <h2>Registro de Entrega</h2>
         <p v-if="paradasRestantes.length > 0">
           Tienes <strong>{{ paradasRestantes.length }}</strong> paradas pendientes.
         </p>
-        <p v-else class="success-text">✨ ¡Has completado todas tus paradas de hoy!</p>
+        <p v-else class="success-text">¡Has completado todas tus paradas de hoy!</p>
       </header>
 
       <div class="form-row">
         <div class="form-group">
-          <label>Tienda Asignada 🏪</label>
+          <label>Tienda Asignada</label>
           <select v-model="form.id_tienda" @change="autoSeleccionarCadena" required :disabled="paradasRestantes.length === 0">
             <option :value="null" disabled>-- Seleccione la parada --</option>
             <option v-for="t in paradasRestantes" :key="t.id_tienda" :value="t.id_tienda">
@@ -20,24 +20,57 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Cadena 🏢</label>
+          <label>Cadena</label>
           <input type="text" :value="nombreCadenaSeleccionada" readonly class="input-readonly" />
         </div>
       </div>
 
-      <div class="form-section-title">Detalle de Recolección (kg) 📦</div>
+      <div class="form-section-title">Detalle de Recolección</div>
+      
       <div class="kilos-grid">
-        <div class="kilos-card">
+        <div class="form-group">
           <label>Perecedero</label>
           <input type="number" step="0.1" v-model.number="form.perecedero" placeholder="0.0" min="0" />
         </div>
-        <div class="kilos-card">
+        <div class="form-group">
+          <label>Unidad de medida</label>
+          <select v-model="form.unimed_perecedero" required>
+            <option value="" disabled>-- Seleccione unidad --</option>
+            <option value="Kilogramos">Kilogramos (kg)</option>
+            <option value="Piezas">Piezas (pzas)</option>
+            <option value="Cajas">Cajas</option>
+            <option value="Bolsas">Bolsas</option>
+          </select>
+        </div>
+
+        <div class="form-group">
           <label>No Perecedero</label>
           <input type="number" step="0.1" v-model.number="form.no_perecedero" placeholder="0.0" min="0" />
         </div>
-        <div class="kilos-card">
+        <div class="form-group">
+          <label>Unidad de medida</label>
+          <select v-model="form.unimed_noperecedero" required>
+            <option value="" disabled>-- Seleccione unidad --</option>
+            <option value="Kilogramos">Kilogramos (kg)</option>
+            <option value="Piezas">Piezas (pzas)</option>
+            <option value="Cajas">Cajas</option>
+            <option value="Bolsas">Bolsas</option>
+          </select>
+        </div>
+
+        <div class="form-group">
           <label>Bazar</label>
           <input type="number" step="0.1" v-model.number="form.bazar" placeholder="0.0" min="0" />
+        </div>
+        <div class="form-group">
+          <label>Unidad de medida</label>
+          <select v-model="form.unimed_bazar" required>
+            <option value="" disabled>-- Seleccione unidad --</option>
+            <option value="Kilogramos">Kilogramos (kg)</option>
+            <option value="Piezas">Piezas (pzas)</option>
+            <option value="Cajas">Cajas</option>
+            <option value="Bolsas">Bolsas</option>
+          </select>
         </div>
       </div>
 
@@ -47,8 +80,8 @@
           <input type="text" v-model="form.folio" placeholder="ABC-123" required />
         </div>
         <div class="form-group">
-          <label>Temperatura</label>
-          <input type="number" v-model="form.temperatura" required />
+          <label>Temperatura (°C)</label>
+          <input type="number" step="0.1" v-model.number="form.temperatura" placeholder="4.0" required />
         </div>
         <div class="form-group">
           <label>Hora Llegada</label>
@@ -61,8 +94,32 @@
       </div>
 
       <div class="form-group">
-        <label>Peso Total Calculado (kg) ⚖️</label>
+        <label>Peso Total Calculado</label>
         <input type="number" :value="totalCalculado" readonly class="input-total-auto" />
+      </div>
+
+      <div class="form-row" style="margin-top: 15px; align-items: center;">
+        <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+          <input 
+            type="checkbox" 
+            id="recibi_oid" 
+            v-model="form.recibi_oid" 
+            @change="!form.recibi_oid && (form.num_caja = null)"
+            style="width: auto; cursor: pointer;"
+          />
+          <label for="recibi_oid" style="margin-bottom: 0; cursor: pointer;">Recibí OID</label>
+        </div>
+
+        <div class="form-group" v-if="form.recibi_oid">
+          <label>Número de Caja</label>
+          <input 
+            type="number" 
+            v-model.number="form.num_caja" 
+            placeholder="Ej. 104" 
+            min="1"
+            required 
+          />
+        </div>
       </div>
 
       <div class="form-group">
@@ -71,7 +128,7 @@
       </div>
 
       <div class="form-actions">
-        <button type="button" @click="$router.push('/home')" class="btn-cancel">Volver</button>
+        <button type="button" @click="$router.back()" class="btn-cancel">Volver</button>
         <button type="submit" class="btn-submit" :disabled="guardando || paradasRestantes.length === 0">
           {{ guardando ? 'Guardando...' : 'Finalizar Entrega' }}
         </button>
@@ -101,14 +158,19 @@ const form = reactive({
   folio: '',
   temperatura: null,
   perecedero: 0,
+  unimed_perecedero: '',
   no_perecedero: 0,
+  unimed_noperecedero: '',
   bazar: 0,
+  unimed_bazar: '',
   fecha: new Date().toISOString().split('T')[0],
   comentarios: '',
-  id_operador: null
+  id_operador: null,
+  // Nuevos campos agregados
+  recibi_oid: false,
+  num_caja: null
 });
 
-// Función auxiliar para obtener la hora actual en formato HH:mm
 const obtenerHoraActual = () => {
   const ahora = new Date();
   const horas = String(ahora.getHours()).padStart(2, '0');
@@ -135,13 +197,13 @@ const cargarDatos = async () => {
       form.id_ruta = resRuta.data[0].id_ruta;
       form.id_operador = resRuta.data[0].id_operador;
       
-      // --- ACTUALIZACIÓN DE HORAS ---
-      // Ponemos la hora actual tanto en llegada como en salida por defecto
       const horaActual = obtenerHoraActual();
       form.hora_llegada = horaActual;
       form.hora_salida = horaActual; 
     }
-  } catch (e) { console.error(e); }
+  } catch (e) { 
+    console.error("Error cargando itinerario:", e); 
+  }
 };
 
 onMounted(() => {
@@ -158,25 +220,25 @@ const autoSeleccionarCadena = () => {
 };
 
 const enviarRegistro = async () => {
-  // Validación básica de tiempo: que la salida no sea antes que la llegada
   if (form.hora_salida < form.hora_llegada) {
     alert('⚠️ La hora de salida no puede ser anterior a la hora de llegada');
     return;
   }
 
-  if (totalCalculado.value <= -1) {
+  if (totalCalculado.value <= 0) {
     alert('⚠️ Por favor ingrese al menos una cantidad mayor a 0');
     return;
   }
 
   guardando.value = true;
   try {
+    // Aquí el objeto 'form' ya lleva automáticamente 'recibi_oid' y 'num_caja'
     await axios.post('/bitacora', form);
     paradasCompletasIds.value.push(form.id_tienda);
     alert('✅ Parada registrada con éxito');
     router.push('/mapa'); 
   } catch (e) {
-    alert('❌ Error: ' + (e.response?.data?.error || 'No se pudo guardar'));
+    alert('❌ Error: ' + (e.response?.data?.error || 'No se pudo guardar la entrega'));
   } finally {
     guardando.value = false;
   }
