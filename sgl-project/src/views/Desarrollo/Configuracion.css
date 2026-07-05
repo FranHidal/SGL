@@ -1,0 +1,95 @@
+.config-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.config-header {
+  margin-bottom: 30px;
+  border-bottom: 2px solid #eceff1;
+  padding-bottom: 15px;
+}
+
+.config-header h2 {
+  color: #2c3e50;
+  margin: 0 0 5px 0;
+  font-size: 1.8rem;
+}
+
+.config-header p {
+  color: #7f8c8d;
+  margin: 0;
+}
+
+/* Grid para futuras herramientas */
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+/* Tarjetas */
+.config-card {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  padding: 20px;
+  display: flex;
+  gap: 15px;
+  align-items: flex-start;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.config-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+}
+
+.card-icon {
+  font-size: 2rem;
+  background: #f7fafc;
+  padding: 10px;
+  border-radius: 50%;
+  border: 1px solid #edf2f7;
+}
+
+.card-content h3 {
+  margin: 0 0 10px 0;
+  color: #2d3748;
+  font-size: 1.2rem;
+}
+
+.card-content p {
+  color: #4a5568;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+/* Botones */
+.btn-action {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.btn-danger {
+  background-color: #e53e3e;
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: #c53030;
+}
+
+.btn-action:disabled {
+  background-color: #cbd5e0;
+  cursor: not-allowed;
+  color: #718096;
+}

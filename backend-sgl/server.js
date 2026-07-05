@@ -781,6 +781,31 @@ apiRouter.post('/desarrollador/bitacora-historica', (req, res) => {
     });
 });
 
+// Resetear las ubicaciones de los operadores
+apiRouter.post('/reset-ubicaciones', (req, res) => {
+  const LAT_CARITAS = 21.212901;
+  const LNG_CARITAS = -86.842403;
+
+  const query = `
+    UPDATE Operador 
+    SET latitud_actual = ?, longitud_actual = ?, ultima_conexion = NOW()
+  `;
+
+  db.query(query, [LAT_CARITAS, LNG_CARITAS], (err, result) => {
+    if (err) {
+      console.error('Error al ejecutar reset de ubicaciones:', err);
+      return res.status(500).json({ error: 'Error interno en la base de datos: ' + err.message });
+    }
+
+    const filasModificadas = result?.affectedRows || 0;
+
+    return res.status(200).json({
+      success: true,
+      message: `Se restableció la ubicación de ${filasModificadas} operadores correctamente.`
+    });
+  });
+});
+
 // --- OBTENER TABLA DE BITÁCORAS AGRUPADA (REPORTE) ---
 apiRouter.get('/global/reporte-bitacoras', (req, res) => {
     const query = `

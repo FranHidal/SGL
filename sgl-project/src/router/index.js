@@ -82,6 +82,12 @@ const router = createRouter({
       name: 'bitacoradesarrollo',
       component: () => import('../views/Desarrollo/Bitacora.vue'),
       meta: { requiresAuth: true, role: 'desarrollo' }
+    },
+    {
+      path: '/configuracion',
+      name: 'configuracion',
+      component: () => import('../views/Desarrollo/Configuracion.vue'),
+      meta: { requiresAuth: true, role: 'desarrollo' }
     }
   ]
 })

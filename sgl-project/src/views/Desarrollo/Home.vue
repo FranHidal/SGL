@@ -11,6 +11,11 @@
         <h2>Historico de Bitácoras</h2>
         <p>Captura de las bítacoras de recolección de tiempo atrás</p>
       </button>
+      <button class="menu-card" @click="goTo('configuracion')">
+        <div class="card-icon">⚙️</div>
+        <h2>Configuración de la página</h2>
+        <p>Acciones de configuración para la página</p>
+      </button>
 
     </div>
 
