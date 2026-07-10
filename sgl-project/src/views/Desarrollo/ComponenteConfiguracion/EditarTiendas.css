@@ -1,0 +1,141 @@
+.edit-tiendas-wrapper {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  margin-top: 25px;
+}
+
+.section-title-container {
+  margin-bottom: 20px;
+}
+
+.section-title-container h3 {
+  margin: 0 0 5px 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+}
+
+.section-title-container p {
+  margin: 0;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.crud-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.crud-table th, .crud-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+
+.crud-table th {
+  background-color: #f8fafc;
+  color: #4a5568;
+  font-weight: 600;
+}
+
+.row-editing {
+  background-color: #f7fafc;
+}
+
+/* Formateo de textos y badges */
+.text-bold { font-weight: 600; color: #2d3748; }
+.text-muted { color: #718096; }
+.text-sm { font-size: 0.85rem; }
+.text-xs { font-size: 0.75rem; display: block; }
+.text-center { text-align: center; }
+
+.badge-cadena {
+  background-color: #ebf8ff;
+  color: #2b6cb0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.geo-text {
+  font-family: monospace;
+  color: #4a5568;
+  white-space: nowrap;
+}
+
+.contact-display {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Elementos de entrada dentro de la tabla */
+.table-input, .table-select, .table-textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  box-sizing: border-box;
+}
+
+.table-input.sm {
+  font-size: 0.75rem;
+  padding: 4px;
+}
+
+.table-textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.geo-inputs, .name-inputs, .contact-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+}
+
+/* Botones de acción */
+.actions-cell {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.btn-edit {
+  background-color: #edf2f7;
+  color: #2d3748;
+  border: 1px solid #cbd5e0;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.btn-edit:hover { background-color: #e2e8f0; }
+
+.btn-save, .btn-cancel {
+  border: none;
+  background: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.btn-save:hover { background-color: #c6f6d5; }
+.btn-cancel:hover { background-color: #fed7d7; }

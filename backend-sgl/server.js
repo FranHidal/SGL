@@ -806,6 +806,57 @@ apiRouter.post('/reset-ubicaciones', (req, res) => {
   });
 });
 
+// --- ACTUALIZAR TIENDA Y CONTACTO ASOCIADO ---
+apiRouter.put('/admin/tiendas/:id_tienda/:id_contacto', (req, res) => {
+    const { id_tienda, id_contacto } = req.params;
+    const { 
+        nombre_tienda, id_cadena, direccion, latitud, longitud, 
+        contacto_nombre, contacto_apellido, telefono, correo_electronico 
+    } = req.body;
+
+    db.beginTransaction((err) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        // Paso 1: Actualizar la tabla Contacto
+        const queryContacto = `
+            UPDATE Contacto 
+            SET nombre = ?, primer_apellido = ?, telefono = ?, correo_electronico = ? 
+            WHERE id_contacto = ?
+        `;
+        db.query(queryContacto, [contacto_nombre, contacto_apellido, telefono, correo_electronico, id_contacto], (errC) => {
+            if (errC) {
+                return db.rollback(() => {
+                    return res.status(500).json({ error: "Error al actualizar datos del contacto: " + errC.message });
+                });
+            }
+
+            // Paso 2: Actualizar la tabla Tienda
+            const queryTienda = `
+                UPDATE Tienda 
+                SET nombre_tienda = ?, id_cadena = ?, direccion = ?, latitud = ?, longitud = ? 
+                WHERE id_tienda = ?
+            `;
+            db.query(queryTienda, [nombre_tienda, id_cadena, direccion, latitud, longitud, id_tienda], (errT) => {
+                if (errT) {
+                    return db.rollback(() => {
+                        return res.status(500).json({ error: "Error al actualizar datos de la sucursal: " + errT.message });
+                    });
+                }
+
+                // Confirmar la transacción si ambos Querys corrieron de forma exitosa
+                db.commit((errCommit) => {
+                    if (errCommit) {
+                        return db.rollback(() => {
+                            return res.status(500).json({ error: "Error al confirmar la transacción: " + errCommit.message });
+                        });
+                    }
+                    res.send({ message: "✅ Sucursal e información de contacto editadas con éxito." });
+                });
+            });
+        });
+    });
+});
+
 // --- OBTENER TABLA DE BITÁCORAS AGRUPADA (REPORTE) ---
 apiRouter.get('/global/reporte-bitacoras', (req, res) => {
     const query = `
