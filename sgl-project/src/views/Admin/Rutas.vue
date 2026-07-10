@@ -19,6 +19,13 @@
         </button>
         <button 
           class="nav-item" 
+          :class="{ active: tabActual === 'editor' }"
+          @click="cambiarTab('editor')"
+        >
+          Editor de Rutas
+        </button>
+        <button 
+          class="nav-item" 
           :class="{ active: tabActual === 'historial' }"
           @click="cambiarTab('historial')"
         >
@@ -55,6 +62,7 @@ import { ref } from 'vue';
 import PlanificadorRutas from './componentsRutas/PlanificacionRutas.vue';
 import HistorialRutas from './componentsRutas/HistorialRutas.vue';
 import MapaOperadores from './componentsRutas/MapaOperadores.vue';
+import EditarRutas from './componentsRutas/EditarRutas.vue';
 
 const tabActual = ref('planificador');
 // NUEVO: Estado para controlar el menú en pantallas pequeñas
@@ -63,7 +71,8 @@ const menuAbierto = ref(false);
 const componentes = {
   planificador: PlanificadorRutas,
   historial: HistorialRutas,
-  mapa: MapaOperadores
+  mapa: MapaOperadores,
+  editor: EditarRutas
 };
 
 // NUEVO: Cambia de pestaña y colapsa el menú si está en móvil

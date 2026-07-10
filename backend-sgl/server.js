@@ -307,6 +307,94 @@ apiRouter.post('/rutas/generar', (req, res) => {
     });
 });
 
+// A. OBTENER LAS RUTAS DE HOY PARA EL SELECTOR
+apiRouter.get('/admin/rutas-hoy', (req, res) => {
+    const query = `
+        SELECT r.id_ruta, r.optimizada, c.nombre AS nombre_operador, c.primer_apellido
+        FROM Ruta r
+        JOIN Operador o ON r.id_operador = o.id_operador
+        JOIN Colaborador c ON o.id_colaborador = c.id_colaborador
+        WHERE r.fecha_creacion = CURDATE()
+        ORDER BY r.id_ruta DESC
+    `;
+    db.query(query, (err, result) => {
+        if (err) return res.status(500).send(err);
+        res.send(result);
+    });
+});
+
+// B. OBTENER LAS PARADAS ACTUALES DE UNA RUTA ESPECÍFICA
+apiRouter.get('/admin/rutas-detalle/:id_ruta', (req, res) => {
+    const query = `
+        SELECT rd.id_ruta_detalle, rd.id_tienda, t.nombre_tienda, c.nombre_cadena
+        FROM Ruta_Detalle rd
+        JOIN Tienda t ON rd.id_tienda = t.id_tienda
+        LEFT JOIN Cadena c ON t.id_cadena = c.id_cadena
+        WHERE rd.id_ruta = ?
+        ORDER BY rd.orden ASC
+    `;
+    db.query(query, [req.params.id_ruta], (err, result) => {
+        if (err) return res.status(500).send(err);
+        res.send(result);
+    });
+});
+
+// C. MODIFICAR LA RUTA, GUARDAR NUEVOS PUNTOS Y RE-OPTIMIZAR CON PYTHON
+apiRouter.put('/admin/rutas/modificar/:id_ruta', (req, res) => {
+    const id_ruta = req.params.id_ruta;
+    const { tiendas } = req.body; // Array de IDs enviado desde Vue: [2, 4, 1]
+
+    db.beginTransaction((err) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        // Paso 1: Limpiar los detalles antiguos de la ruta
+        db.query('DELETE FROM Ruta_Detalle WHERE id_ruta = ?', [id_ruta], (errD) => {
+            if (errD) return db.rollback(() => res.status(500).json({ error: errD.message }));
+
+            // Paso 2: Forzar el flag de optimizada a 0 para que el script de Python lo procese
+            db.query('UPDATE Ruta SET optimizada = 0 WHERE id_ruta = ?', [id_ruta], (errU) => {
+                if (errU) return db.rollback(() => res.status(500).json({ error: errU.message }));
+
+                // Si se removieron todos los puntos de la ruta y quedó vacía, cerramos transacción aquí
+                if (!tiendas || tiendas.length === 0) {
+                    return db.commit((errC) => {
+                        if (errC) return db.rollback(() => res.status(500).json({ error: errC.message }));
+                        return res.status(200).json({ message: "Ruta vaciada con éxito en el sistema." });
+                    });
+                }
+
+                // Paso 3: Insertar el nuevo set de tiendas modificado con un orden secuencial temporal
+                const valoresDetalle = tiendas.map((id_tienda, index) => [id_ruta, id_tienda, index + 1]);
+                const queryInsert = `INSERT INTO Ruta_Detalle (id_ruta, id_tienda, orden) VALUES ?`;
+
+                db.query(queryInsert, [valoresDetalle], (errI) => {
+                    if (errI) return db.rollback(() => res.status(500).json({ error: errI.message }));
+
+                    db.commit((errCommit) => {
+                        if (errCommit) return db.rollback(() => res.status(500).json({ error: errCommit.message }));
+
+                        // Paso 4: Mandar a llamar asíncronamente al worker VSP.py para recalcular el TSP
+                        const scriptPython = path.join(__dirname, '../AI-worker/VSP.py');
+                        const comando = `PYTHONPATH=/home/fhidalgo/.local/lib/python3.12/site-packages python3 "${scriptPython}"`;
+
+                        exec(comando, (pyErr, stdout, stderr) => {
+                            if (pyErr) {
+                                console.error("❌ ERROR CRÍTICO AL RE-OPTIMIZAR PYTHON DESDE NODE:");
+                                console.error(stderr);
+                            }
+                            if (stdout) {
+                                console.log("🐍 MENSAJE DE PYTHON (RE-OPTIMIZACIÓN):", stdout);
+                            }
+                        });
+
+                        return res.status(200).json({ message: `✅ Ruta #${id_ruta} guardada. El optimizador inteligente fue invocado.` });
+                    });
+                });
+            });
+        });
+    });
+});
+
 // --- VISUALIZACIÓN DE RUTAS ---
 apiRouter.get('/rutas/historial', (req, res) => {
     const query = `
