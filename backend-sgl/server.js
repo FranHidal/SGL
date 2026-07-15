@@ -647,6 +647,69 @@ apiRouter.get('/admin/ubicacion-operadores', (req, res) => {
     });
 });
 
+// --- MONITOREO LOGÍSTICO (DASHBOARD) ---
+
+// 1. OBTENER UBICACIÓN EN TIEMPO REAL DE OPERADORES Y SUS UNIDADES
+apiRouter.get('/admin/ubicacion-operadores-dashboard', (req, res) => {
+    const query = `
+        SELECT 
+            o.id_operador,
+            o.id_colaborador,
+            c.nombre, 
+            c.primer_apellido, 
+            v.matricula, 
+            o.latitud_actual, 
+            o.longitud_actual, 
+            o.ultima_conexion
+        FROM Operador o
+        JOIN Colaborador c ON o.id_colaborador = c.id_colaborador
+        LEFT JOIN Vehiculo v ON o.id_vehiculo = v.id_vehiculo
+        WHERE o.latitud_actual IS NOT NULL 
+          AND o.longitud_actual IS NOT NULL
+    `;
+
+    db.query(query, (err, result) => {
+        if (err) {
+            console.error("❌ Error en /admin/ubicacion-operadores-dashboard:", err);
+            return res.status(500).send(err);
+        }
+        res.send(result);
+    });
+});
+
+// 2. OBTENER EL DETALLE COMPLETO DE LA RUTA ACTIVA DE UN OPERADOR
+apiRouter.get('/admin/monitoreo-ruta/:id_colaborador', (req, res) => {
+    const query = `
+        SELECT 
+            rd.orden, 
+            t.id_tienda, 
+            t.nombre_tienda, 
+            t.latitud, 
+            t.longitud, 
+            rd.id_ruta_detalle, 
+            rd.id_ruta, 
+            o.id_operador, 
+            t.id_cadena, 
+            c.nombre_cadena
+        FROM Ruta r
+        JOIN Operador o ON r.id_operador = o.id_operador
+        JOIN Ruta_Detalle rd ON r.id_ruta = rd.id_ruta
+        JOIN Tienda t ON rd.id_tienda = t.id_tienda
+        LEFT JOIN Cadena c ON t.id_cadena = c.id_cadena
+        WHERE o.id_colaborador = ? 
+          AND r.fecha_creacion >= CURDATE()
+        ORDER BY r.id_ruta DESC, rd.orden ASC
+    `;
+
+    db.query(query, [req.params.id_colaborador], (err, result) => {
+        if (err) {
+            console.error(`❌ Error en /admin/monitoreo-ruta/ para colaborador ${req.params.id_colaborador}:`, err);
+            return res.status(500).send(err);
+        }
+        res.send(result);
+    });
+});
+
 // --- ENDPOINT UNIFICADO PARA EL DASHBOARD DEL DIRECTOR ---
 apiRouter.get('/dashboard-stats', async (req, res) => {
     try {

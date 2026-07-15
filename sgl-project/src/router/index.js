@@ -48,6 +48,12 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'admin' }
     },
     {
+      path: '/dashboardlogistica',
+      name: 'dashboardlogistica',
+      component: () => import('../views/Admin/Dashboard.vue'),
+      meta: { requiresAuth: true, role: 'admin' }
+    },
+    {
       path: '/tablabitacoras',
       name: 'tablabitacoras',
       component: () => import('../views/Global/TablaBitacoras.vue'),

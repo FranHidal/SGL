@@ -30,6 +30,12 @@
         <p>Agendar donaciones futuras</p>
       </button>
 
+      <button class="menu-card" @click="goTo('dashboardlogistica')">
+        <div class="card-icon">📊</div>
+        <h2>Dashboard de Logística</h2>
+        <p>Visualización del tablero de operaciones</p>
+      </button>
+
     </div>
 
     <footer class="menu-footer">
