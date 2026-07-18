@@ -57,7 +57,7 @@ const router = createRouter({
       path: '/tablabitacoras',
       name: 'tablabitacoras',
       component: () => import('../views/Global/TablaBitacoras.vue'),
-      meta: { requiresAuth: true}
+      meta: { requiresAuth: true }
     },
     {
       path: '/director',
@@ -94,7 +94,19 @@ const router = createRouter({
       name: 'configuracion',
       component: () => import('../views/Desarrollo/Configuracion.vue'),
       meta: { requiresAuth: true, role: 'desarrollo' }
-    }
+    },
+    {
+      path: '/Adminvo',
+      name: 'adminvo',
+      component: () => import('../views/Adminvo/Home.vue'),
+      meta: { requiresAuth: true, role: 'adminvo' }
+    },
+    {
+      path: '/DashboardAdminvo',
+      name: 'dashboardadminvo',
+      component: () => import('../views/Adminvo/Dashboard.vue'),
+      meta: { requiresAuth: true, role: 'adminvo' }
+    },
   ]
 })
 
