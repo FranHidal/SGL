@@ -107,6 +107,18 @@ const router = createRouter({
       component: () => import('../views/Adminvo/Dashboard.vue'),
       meta: { requiresAuth: true, role: 'adminvo' }
     },
+    {
+      path: '/Almacen',
+      name: 'almacen',
+      component: () => import('../views/Almacen/Home.vue'),
+      meta: { requiresAuth: true, role: 'almacen' }
+    },
+    {
+      path: '/DashboardAlmacen',
+      name: 'dashboardalmacen',
+      component: () => import('../views/Almacen/Dashboard.vue'),
+      meta: { requiresAuth: true, role: 'almacen' }
+    },
   ]
 })
 

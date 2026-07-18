@@ -45,6 +45,8 @@ export default {
             router.push('/desarrollo');
             } else if (rol === 'adminvo') {
             router.push('/adminvo');
+            } else if (rol === 'almacen') {
+            router.push('/almacen');
           } else {
             alert('Rol no reconocido (' + user.rol + '). Contacta a soporte.');
           }
